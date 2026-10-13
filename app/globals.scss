@@ -1,4 +1,5 @@
-@use "@carbon/react";
+// Fonts come from next/font (IBM Plex Sans), not Carbon's @font-face.
+@use "@carbon/react" with ($css--font-face: false);
 @use "@carbon/react/scss/theme";
 @use "@carbon/react/scss/themes";
 
