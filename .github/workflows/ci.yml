@@ -39,10 +39,10 @@ jobs:
       - name: Commit updated lockfile
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          if ! git diff --quiet pnpm-lock.yaml; then
+          if ! git diff --quiet pnpm-lock.yaml pnpm-workspace.yaml; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: update pnpm-lock.yaml" pnpm-lock.yaml
+            git commit -m "chore: update pnpm lockfile" pnpm-lock.yaml pnpm-workspace.yaml
             git push
           fi
 
