@@ -47,6 +47,32 @@ def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     emit({"event": "done", "path": str(path), "seed": job.seed, "seconds": round(time.monotonic() - t1, 1)})
 
 
+def model_runner():
+    """Runs jobs for the local API. Keeps the model loaded between runs."""
+    cache = {}
+
+    def run(job, out, emit):
+        from .krea import generate, load_pipeline, make_generator
+
+        plan = info()["plan"]
+        if plan not in cache:
+            emit({"event": "loading"})
+            cache.clear()
+            cache[plan] = load_pipeline(plan)
+        generate(job, cache[plan], make_generator(job.seed), out, emit)
+
+    return run
+
+
+def serve(port: int):
+    os.environ.setdefault("HF_HOME", str(HOME / "models"))
+    from .server import make_server
+
+    srv = make_server(port, HOME / "output", model_runner(), info)
+    emit({"event": "serving", "url": f"http://127.0.0.1:{srv.server_address[1]}"})
+    srv.serve_forever()
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="dotstories-engine")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -56,10 +82,15 @@ def main(argv=None) -> int:
     g.add_argument("--out", type=Path, default=HOME / "output" / "image.png")
     g.add_argument("--seed", type=int)
     g.add_argument("--plan", help="override the memory plan (see plan.py)")
+    s = sub.add_parser("serve", help="local API for the website")
+    s.add_argument("--port", type=int, default=47761)
     args = ap.parse_args(argv)
 
     if args.cmd == "info":
         emit(info())
+        return 0
+    if args.cmd == "serve":
+        serve(args.port)
         return 0
     try:
         run_generate(args.dot, args.out, args.seed, args.plan)

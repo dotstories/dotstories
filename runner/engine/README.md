@@ -22,6 +22,23 @@ uv run --extra ml dotstories-engine generate examples/dark-fantasy.json
 
 Options: `--seed 123`, `--out my.png`, `--plan gpu-fp8-stream` (memory plans in `src/dotstories_engine/plan.py`).
 
+## Local API (for the website)
+
+```bash
+uv run --extra ml dotstories-engine serve      # http://127.0.0.1:47761
+```
+
+| Call | What |
+|---|---|
+| `GET /info` | hardware, tier, time estimate |
+| `POST /jobs` | start a dot (`prompt, style, seed, width, height, steps`) |
+| `GET /jobs/<id>` | status: `queued → loading → running → done / error` + progress |
+| `GET /jobs/<id>/image` | the PNG |
+
+- Listens on `127.0.0.1` only.
+- Only dotstories.com (and localhost dev) may call it: checked by the `Origin` header. Other websites get `403`.
+- One dot at a time (`409` when busy). Every input field is validated.
+
 ## Test
 
 ```bash
