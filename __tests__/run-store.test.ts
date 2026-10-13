@@ -1,7 +1,10 @@
 import { latest } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
 import { RUNNER_URL } from "../lib/runner";
+import { runPostStep } from "../lib/shader";
 import { useRunStore } from "../store/run";
+
+jest.mock("../lib/shader", () => ({ runPostStep: jest.fn() }));
 
 const INFO = {
   hardware: { device: "cuda", name: "RTX 4080", vram_gb: 16, ram_gb: 32 },
@@ -17,6 +20,7 @@ function fakeRunner(statuses: object[]) {
     const path = url.replace(RUNNER_URL, "");
     calls.push(`${init?.method ?? "GET"} ${path}`);
     const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
+    if (path === "/jobs/abc/image") return { ok: true, status: 200, blob: async () => new Blob(["raw"]) };
     if (path === "/info") return json(INFO);
     if (path === "/jobs") return json({ id: "abc" }, 202);
     if (path === "/jobs/abc") return json(statuses.shift());
@@ -26,7 +30,7 @@ function fakeRunner(statuses: object[]) {
 }
 
 const reset = () =>
-  useRunStore.setState({ runner: { state: "checking" }, job: null, image: null, error: null, pollMs: 0 });
+  useRunStore.setState({ runner: { state: "checking" }, job: null, image: null, error: null, shading: false, pollMs: 0 });
 
 describe("run store", () => {
   beforeEach(reset);
@@ -67,5 +71,29 @@ describe("run store", () => {
     await useRunStore.getState().run(latest(darkFantasy).inputs);
     expect(useRunStore.getState().error).toBe("CUDA out of memory");
     expect(useRunStore.getState().image).toBeNull();
+  });
+
+  it("runs the dot's post-steps in the browser, then shows that image", async () => {
+    fakeRunner([{ id: "abc", status: "done", progress: { step: 8, steps: 8, eta: 0 }, error: null }]);
+    (runPostStep as jest.Mock).mockResolvedValue(new Blob(["card"]));
+    URL.createObjectURL = jest.fn(() => "blob:card");
+    const v = latest(darkFantasy);
+
+    await useRunStore.getState().run(v.inputs, v.postSteps);
+
+    expect(runPostStep).toHaveBeenCalledWith(v.postSteps[0], expect.any(Blob));
+    expect(useRunStore.getState().image).toBe("blob:card");
+    expect(useRunStore.getState().shading).toBe(false);
+  });
+
+  it("if a post-step fails, still shows the raw image and says why", async () => {
+    fakeRunner([{ id: "abc", status: "done", progress: { step: 8, steps: 8, eta: 0 }, error: null }]);
+    (runPostStep as jest.Mock).mockRejectedValue(new Error("pyodide failed"));
+    const v = latest(darkFantasy);
+
+    await useRunStore.getState().run(v.inputs, v.postSteps);
+
+    expect(useRunStore.getState().image).toBe(`${RUNNER_URL}/jobs/abc/image`);
+    expect(useRunStore.getState().error).toMatch(/pyodide failed/);
   });
 });

@@ -17,7 +17,7 @@ const INFO = {
 };
 
 const show = (state: object) => {
-  useRunStore.setState({ job: null, image: null, error: null, checkRunner: async () => {}, ...state });
+  useRunStore.setState({ job: null, image: null, error: null, shading: false, checkRunner: async () => {}, ...state });
   render(<Demo dot={darkFantasy} />);
 };
 
@@ -67,5 +67,11 @@ describe("Demo", () => {
   it("shows the license", () => {
     show({ runner: { state: "missing" } });
     expect(screen.getByText(/krea 2 community license/i)).toBeInTheDocument();
+  });
+
+  it("says when the browser adds the finishing touches", () => {
+    show({ runner: { state: "ready", info: INFO }, shading: true });
+    expect(screen.getByText(/adding title and effects in your browser/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
   });
 });

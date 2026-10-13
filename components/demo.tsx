@@ -9,8 +9,8 @@ import { isRunning, useRunStore } from "@/store/run";
 export default function Demo({ dot }: { dot: Dot }) {
   const v = latest(dot);
   const [prompt, setPrompt] = useState(v.inputs.prompt);
-  const { runner, job, image, error, checkRunner, run } = useRunStore();
-  const running = isRunning(job);
+  const { runner, job, image, error, shading, checkRunner, run } = useRunStore();
+  const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function Demo({ dot }: { dot: Dot }) {
           <Button
             renderIcon={PlayFilledAlt}
             disabled={runner.state !== "ready" || running || !prompt.trim()}
-            onClick={() => run({ ...v.inputs, prompt })}
+            onClick={() => run({ ...v.inputs, prompt }, v.postSteps)}
           >
             Run
           </Button>
@@ -65,8 +65,9 @@ export default function Demo({ dot }: { dot: Dot }) {
 }
 
 function Status() {
-  const { runner, job } = useRunStore();
+  const { runner, job, shading } = useRunStore();
 
+  if (shading) return <InlineLoading description="Adding title and effects in your browser…" />;
   if (job?.status === "loading" || job?.status === "queued")
     return <InlineLoading description="Loading the model (first run downloads it)…" />;
   if (job?.status === "running" && job.progress) {

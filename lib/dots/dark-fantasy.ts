@@ -31,6 +31,8 @@ export const darkFantasy: Dot = {
       postSteps: [
         {
           type: "shader",
+          script: "/dots/dark-fantasy/shader.py",
+          files: ["fonts/Cinzel.ttf", "fonts/CormorantItalic.ttf"],
           preset: "Twilight Clear",
           text: {
             title: "The Weeping Gate",

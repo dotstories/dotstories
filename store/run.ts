@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import type { Inputs } from "@/lib/dot";
+import type { Inputs, ShaderStep } from "@/lib/dot";
 import { findRunner, getJob, imageUrl, type JobStatus, type RunnerInfo, startJob } from "@/lib/runner";
+import { runPostStep } from "@/lib/shader";
 
 type Runner = { state: "checking" } | { state: "missing" } | { state: "ready"; info: RunnerInfo };
 
@@ -9,9 +10,10 @@ type RunState = {
   job: JobStatus | null;
   image: string | null;
   error: string | null;
+  shading: boolean; // post-steps running in the browser
   pollMs: number;
   checkRunner: () => Promise<void>;
-  run: (inputs: Inputs) => Promise<void>;
+  run: (inputs: Inputs, postSteps?: ShaderStep[]) => Promise<void>;
 };
 
 export const POLL_MS = 500;
@@ -22,6 +24,7 @@ export const useRunStore = create<RunState>((set, get) => ({
   job: null,
   image: null,
   error: null,
+  shading: false,
   pollMs: POLL_MS,
 
   checkRunner: async () => {
@@ -29,23 +32,38 @@ export const useRunStore = create<RunState>((set, get) => ({
     set({ runner: info ? { state: "ready", info } : { state: "missing" } });
   },
 
-  run: async (inputs) => {
-    set({ job: null, image: null, error: null });
+  run: async (inputs, postSteps = []) => {
+    set({ job: null, image: null, error: null, shading: false });
+    let id: string;
     try {
-      const { id } = await startJob(inputs);
+      id = (await startJob(inputs)).id;
       for (;;) {
         const job = await getJob(id);
         set({ job });
-        if (job.status === "done") return set({ image: imageUrl(id) });
+        if (job.status === "done") break;
         if (job.status === "error") return set({ error: job.error ?? "Something went wrong" });
         await sleep(get().pollMs);
       }
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
-      await get().checkRunner(); // maybe the app was closed
+      set({ error: message(e) });
+      return get().checkRunner(); // maybe the app was closed
+    }
+
+    if (!postSteps.length) return set({ image: imageUrl(id) });
+    set({ shading: true });
+    try {
+      let image = await (await fetch(imageUrl(id))).blob();
+      for (const step of postSteps) image = await runPostStep(step, image);
+      set({ image: URL.createObjectURL(image) });
+    } catch (e) {
+      set({ error: `Finishing touches failed: ${message(e)}`, image: imageUrl(id) });
+    } finally {
+      set({ shading: false });
     }
   },
 }));
 
-export const isRunning = (job: JobStatus | null) =>
-  !!job && ["queued", "loading", "running"].includes(job.status);
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+export const isRunning = (job: JobStatus | null, shading = false) =>
+  shading || (!!job && ["queued", "loading", "running"].includes(job.status));

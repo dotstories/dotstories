@@ -13,6 +13,8 @@ export const InputsSchema = z.object({
 /** Runs in the browser after the runner is done (sandboxed, Pyodide). */
 export const ShaderStepSchema = z.object({
   type: z.literal("shader"),
+  script: z.string().regex(/^\/dots\/[a-z0-9-]+\/[a-z0-9_]+\.py$/), // e.g. /dots/dark-fantasy/shader.py
+  files: z.array(z.string().regex(/^(?!.*\.\.)[A-Za-z0-9_./-]+$/, "no .. in paths")), // next to the script, e.g. fonts/Cinzel.ttf
   preset: z.string(),
   text: z.object({ title: z.string(), region: z.string(), subtitle: z.string(), quote: z.string() }),
 });
@@ -41,6 +43,7 @@ export const DotSchema = z.object({
 export type Dot = z.infer<typeof DotSchema>;
 export type Inputs = z.infer<typeof InputsSchema>;
 export type DotVersion = z.infer<typeof VersionSchema>;
+export type ShaderStep = z.infer<typeof ShaderStepSchema>;
 
 const semver = (v: string) => v.split(".").map(Number);
 const newer = (a: string, b: string) => {
