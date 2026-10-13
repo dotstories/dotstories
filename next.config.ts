@@ -1,12 +1,16 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
 
+initOpenNextCloudflareForDev();
+
 const nextConfig: NextConfig = {
-  /* config options here */
   experimental: {
     agentFeedback: true,
   },
   cacheComponents: true,
   partialPrefetching: true,
+  // Images are already sized; no image service needed on Cloudflare.
+  images: { unoptimized: true },
   turbopack: {
     rules: {
       "*.css": {
