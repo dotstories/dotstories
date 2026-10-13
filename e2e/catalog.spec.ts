@@ -15,7 +15,7 @@ test("catalog lists dots and opens a dot page", async ({ page }) => {
 
 test("header links to the catalog", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("banner").getByRole("link", { name: "Dots" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "Dots", exact: true }).click();
   await expect(page).toHaveURL(/\/dots$/);
 });
 
