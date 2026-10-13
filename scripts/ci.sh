@@ -4,7 +4,7 @@ log=$(mktemp)
 "$@" 2>&1 | tee "$log"
 code=${PIPESTATUS[0]}
 if [ "$code" -ne 0 ]; then
-  msg=$(tail -n 40 "$log" | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+  msg=$(tail -n "${TAIL:-40}" "$log" | sed 's/\x1b\[[0-9;]*m//g; s/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
   echo "::error title=Failed: $*::$msg"
 fi
 exit "$code"
