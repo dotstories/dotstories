@@ -1,0 +1,19 @@
+@use "@carbon/react";
+@use "@carbon/styles/scss/theme";
+@use "@carbon/styles/scss/themes";
+
+// Dark theme fits dark-fantasy outputs best.
+:root {
+  @include theme.theme(themes.$g100);
+}
+
+body {
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+.container {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
