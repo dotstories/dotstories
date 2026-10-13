@@ -51,6 +51,8 @@ jobs:
       - run: scripts/ci.sh pnpm test
       - run: scripts/ci.sh pnpm build:worker # next build + Cloudflare worker
       - run: scripts/ci.sh pnpm bundle:check
+      - run: TAIL=150 scripts/ci.sh scripts/worker-debug.sh # TEMP debug
+        continue-on-error: true
 
       - run: scripts/ci.sh pnpm exec playwright install --with-deps chromium
       - run: scripts/ci.sh pnpm test:e2e # runs on the real Cloudflare runtime
