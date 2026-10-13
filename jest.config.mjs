@@ -3,7 +3,7 @@ import nextJest from "next/jest.js";
 const createJestConfig = nextJest({ dir: "./" });
 
 // Packages that ship ESM only (pulled in by Carbon): compile them for Jest too.
-const ESM_ONLY = ["temporal-polyfill"];
+const ESM_ONLY = ["temporal-"];
 
 export default async function config() {
   const base = await createJestConfig({
