@@ -36,7 +36,8 @@ def load_pipeline(plan: str):
     import torch
     from diffusers import Krea2Pipeline
 
-    pipe = Krea2Pipeline.from_pretrained(MODEL, dtype=torch.bfloat16)
+    # safetensors only: pickle model files can run code when loaded.
+    pipe = Krea2Pipeline.from_pretrained(MODEL, dtype=torch.bfloat16, use_safetensors=True)
     fp8 = dict(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.bfloat16)
 
     if plan == "gpu-bf16":

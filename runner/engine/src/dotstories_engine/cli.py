@@ -16,6 +16,14 @@ from .plan import memory_plan
 HOME = Path(os.environ.get("DOTSTORIES_HOME", Path.home() / ".dotstories"))
 
 
+def start_sandbox():
+    """On by default. DOTSTORIES_NO_SANDBOX=1 turns it off (debugging only)."""
+    if os.environ.get("DOTSTORIES_NO_SANDBOX") != "1":
+        from . import sandbox
+
+        sandbox.install(HOME)
+
+
 def emit(event: dict):
     print(json.dumps(event, ensure_ascii=False), flush=True)
 
@@ -28,7 +36,9 @@ def info() -> dict:
 
 def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))  # all downloads in one place
+    start_sandbox()
     from .krea import generate, load_job, load_pipeline, make_generator
+    from .sandbox import locked
 
     job = load_job(dot)
     if seed is not None:
@@ -43,7 +53,8 @@ def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     emit({"event": "loaded", "seconds": round(time.monotonic() - t0, 1)})
 
     t1 = time.monotonic()
-    path = generate(job, pipe, make_generator(job.seed), out, emit)
+    with locked():
+        path = generate(job, pipe, make_generator(job.seed), out, emit)
     emit({"event": "done", "path": str(path), "seed": job.seed, "seconds": round(time.monotonic() - t1, 1)})
 
 
@@ -53,19 +64,22 @@ def model_runner():
 
     def run(job, out, emit):
         from .krea import generate, load_pipeline, make_generator
+        from .sandbox import locked
 
         plan = info()["plan"]
         if plan not in cache:
             emit({"event": "loading"})
             cache.clear()
-            cache[plan] = load_pipeline(plan)
-        generate(job, cache[plan], make_generator(job.seed), out, emit)
+            cache[plan] = load_pipeline(plan)  # may download: network allowed here
+        with locked():  # no network, no new processes while the dot runs
+            generate(job, cache[plan], make_generator(job.seed), out, emit)
 
     return run
 
 
 def serve(port: int):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))
+    start_sandbox()
     from .server import make_server
 
     srv = make_server(port, HOME / "output", model_runner(), info)

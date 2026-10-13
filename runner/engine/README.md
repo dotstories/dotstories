@@ -39,6 +39,15 @@ uv run --extra ml dotstories-engine serve      # http://127.0.0.1:47761
 - Only dotstories.com (and localhost dev) may call it: checked by the `Origin` header. Other websites get `403`.
 - One dot at a time (`409` when busy). Every input field is validated.
 
+## Sandbox
+
+On by default for `generate` and `serve` (layer 1; the OS sandbox comes with the Tauri app):
+
+- **Files:** writes only inside `~/.dotstories` and temp. Caches (Hugging Face, torch) are moved there.
+- **While a dot runs:** no network (except 127.0.0.1), no new processes.
+- **Models:** safetensors only. Pickle files can run code, so they are never loaded.
+- Can't be switched off once on (Python audit hook). For debugging only: `DOTSTORIES_NO_SANDBOX=1`.
+
 ## Test
 
 ```bash
