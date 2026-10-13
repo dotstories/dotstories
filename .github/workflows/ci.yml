@@ -31,9 +31,9 @@ jobs:
       - name: Install
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pnpm install --no-frozen-lockfile
+            scripts/ci.sh pnpm install --no-frozen-lockfile
           else
-            pnpm install --frozen-lockfile
+            scripts/ci.sh pnpm install --frozen-lockfile
           fi
 
       - name: Commit updated lockfile
@@ -46,14 +46,14 @@ jobs:
             git push
           fi
 
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm bundle:check
+      - run: scripts/ci.sh pnpm lint
+      - run: scripts/ci.sh pnpm typecheck
+      - run: scripts/ci.sh pnpm test
+      - run: scripts/ci.sh pnpm build
+      - run: scripts/ci.sh pnpm bundle:check
 
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - run: scripts/ci.sh pnpm exec playwright install --with-deps chromium
+      - run: scripts/ci.sh pnpm test:e2e
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -85,5 +85,5 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run deploy
+      - run: scripts/ci.sh pnpm install --frozen-lockfile
+      - run: scripts/ci.sh pnpm run deploy
