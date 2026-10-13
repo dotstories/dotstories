@@ -67,7 +67,9 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -86,4 +88,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: scripts/ci.sh pnpm install --frozen-lockfile
-      - run: scripts/ci.sh pnpm run deploy
+      - name: Deploy
+        id: deploy
+        run: |
+          scripts/ci.sh pnpm run deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Live::$url"
+
+      - name: Smoke test live site
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          scripts/ci.sh pnpm exec playwright install --with-deps chromium
+          scripts/ci.sh pnpm test:e2e
