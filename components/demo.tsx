@@ -3,11 +3,11 @@
 import { PlayFilledAlt } from "@carbon/icons-react";
 import { Button, InlineLoading, InlineNotification, ProgressBar, TextArea } from "@carbon/react";
 import { useEffect, useState } from "react";
-import { type Dot, latest } from "@/lib/dot";
+import { type Dot, latest, version as findVersion } from "@/lib/dot";
 import { isRunning, useRunStore } from "@/store/run";
 
-export default function Demo({ dot }: { dot: Dot }) {
-  const v = latest(dot);
+export default function Demo({ dot, version }: { dot: Dot; version?: string }) {
+  const v = (version && findVersion(dot, version)) || latest(dot);
   const [prompt, setPrompt] = useState(v.inputs.prompt);
   const { runner, job, image, error, shading, checkRunner, run } = useRunStore();
   const running = isRunning(job, shading);

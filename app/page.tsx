@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Demo from "@/components/demo";
 import { darkFantasy } from "@/lib/dots/dark-fantasy";
 
@@ -9,6 +10,9 @@ export default function Home() {
         <p className="text-[var(--cds-text-secondary)]">What is possible today with AI.</p>
       </div>
       <Demo dot={darkFantasy} />
+      <Link href="/dots" className="cds--link self-start">
+        Browse all dots →
+      </Link>
     </main>
   );
 }

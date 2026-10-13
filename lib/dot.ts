@@ -37,6 +37,7 @@ export const DotSchema = z.object({
   author: z.object({ name: z.string(), url: z.string().url().optional() }),
   license: z.object({ name: z.string(), url: z.string().url(), commercial: z.string() }),
   forkable: z.boolean(),
+  source: z.string().url().optional(), // where the dot's files live, for "Fork on GitHub"
   versions: z.array(VersionSchema).min(1),
 });
 
@@ -54,3 +55,6 @@ const newer = (a: string, b: string) => {
 
 export const latest = (dot: Dot) => dot.versions.reduce((a, b) => (newer(b.version, a.version) ? b : a));
 export const version = (dot: Dot, v: string) => dot.versions.find((x) => x.version === v);
+
+/** Newest first. */
+export const sortedVersions = (dot: Dot) => [...dot.versions].sort((a, b) => (newer(a.version, b.version) ? -1 : 1));

@@ -18,3 +18,21 @@ body {
   width: 100%;
   margin: 0 auto;
 }
+
+// Dot cards: clickable Carbon tiles in a 1px grid, like createcv's /resumes.
+.dot-tiles {
+  gap: 1px;
+}
+
+.dot-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  color: var(--cds-text-primary) !important;
+  outline: 1px solid var(--cds-border-subtle-01);
+
+  svg {
+    fill: var(--cds-text-primary);
+  }
+}
