@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import DownloadApp from "../components/download-app";
 import { detectOS, DOWNLOADS, resetReleaseCheck } from "../lib/download";
 
@@ -12,6 +12,13 @@ describe("detectOS", () => {
   });
 });
 
+// use() + Suspense: let the release check resolve inside act().
+const show = async (os: Parameters<typeof DownloadApp>[0]["os"]) => {
+  await act(async () => {
+    render(<DownloadApp os={os} />);
+  });
+};
+
 const release = (exists: boolean) => {
   resetReleaseCheck();
   global.fetch = jest.fn(async () => ({ ok: exists, status: exists ? 200 : 404 })) as unknown as typeof fetch;
@@ -20,7 +27,7 @@ const release = (exists: boolean) => {
 describe("DownloadApp", () => {
   it("offers the Windows installer on Windows", async () => {
     release(true);
-    render(<DownloadApp os="windows" />);
+    await show("windows");
     const button = await screen.findByRole("link", { name: /download for windows/i });
     expect(button).toHaveAttribute("href", DOWNLOADS.windows);
     expect(screen.getByRole("link", { name: /mac/i })).toHaveAttribute("href", DOWNLOADS.mac);
@@ -28,20 +35,20 @@ describe("DownloadApp", () => {
 
   it("offers the Mac app on a Mac", async () => {
     release(true);
-    render(<DownloadApp os="mac" />);
+    await show("mac");
     expect(await screen.findByRole("link", { name: /download for mac/i })).toHaveAttribute("href", DOWNLOADS.mac);
   });
 
   it("on a phone: explains it needs a computer", async () => {
     release(true);
-    render(<DownloadApp os="phone" />);
+    await show("phone");
     expect(await screen.findByText(/needs a windows or mac computer/i)).toBeInTheDocument();
   });
 
   it("says coming soon when no release is published yet", async () => {
     release(false);
-    render(<DownloadApp os="windows" />);
-    await waitFor(() => expect(screen.getByText(/first release is coming soon/i)).toBeInTheDocument());
+    await show("windows");
+    expect(screen.getByText(/first release is coming soon/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /download for windows/i })).not.toBeInTheDocument();
   });
 });
