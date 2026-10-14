@@ -36,3 +36,69 @@ body {
     fill: var(--cds-text-primary);
   }
 }
+
+// Music player, like the Stable Audio guide: black bar, play square, title, time.
+.audio-player {
+  display: flex;
+  align-items: stretch;
+  height: 64px;
+  background: #000;
+  color: #fff;
+  user-select: none;
+}
+
+.audio-player__button {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  flex-shrink: 0;
+  border-right: 1px solid #2a2a2a;
+  cursor: pointer;
+
+  svg {
+    fill: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: -2px;
+  }
+}
+
+.audio-player__track {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1rem;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:focus-visible {
+    outline: 2px solid var(--cds-focus);
+    outline-offset: -2px;
+  }
+}
+
+.audio-player__played {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #1c1c1c;
+  pointer-events: none;
+}
+
+.audio-player__title,
+.audio-player__time {
+  position: relative; // above the played fill
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audio-player__time {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}

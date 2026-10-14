@@ -1,10 +1,11 @@
-import type { Dot } from "../dot";
+import type { ImageDot } from "../dot";
 
-export const darkFantasy: Dot = {
+export const darkFantasy: ImageDot = {
   slug: "dark-fantasy-thumbnail",
   name: "Dark Fantasy Thumbnail",
   description: "A cinematic dark fantasy YouTube thumbnail with title, region, subtitle and quote.",
   kind: "image",
+  cover: "/demo/weeping-gate.jpg",
   engine: "krea2-turbo",
   author: { name: "Dayonel", url: "https://github.com/Dayonel" },
   license: {
