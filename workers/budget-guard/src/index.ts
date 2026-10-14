@@ -5,12 +5,13 @@ import { estimateUsd } from "./cost";
 import { d1Store, kill, type R2Env, type Store } from "./kill";
 import { fetchUsage, periodStart } from "./usage";
 
-export type Env = R2Env & { DB: D1Database; BUDGET_USD: string; BILLING_DAY: string; WORKERS_PAID: string };
+export type Config = R2Env & { BUDGET_USD: string; BILLING_DAY: string; WORKERS_PAID: string };
+export type Env = Config & { DB: D1Database };
 export type Result = "ok" | "warning" | "stopped" | "already-stopped" | "error";
 
 const WARN_AT = 0.8;
 
-export async function check(env: Env, store: Store, now = new Date(), f: typeof fetch = fetch): Promise<Result> {
+export async function check(env: Config, store: Store, now = new Date(), f: typeof fetch = fetch): Promise<Result> {
   const budget = Number(env.BUDGET_USD);
   if (!env.BUDGET_USD || !(budget >= 0) || !env.ACCOUNT_ID || !env.CF_API_TOKEN) {
     console.error("Budget guard: set BUDGET_USD, ACCOUNT_ID and the CF_API_TOKEN secret.");

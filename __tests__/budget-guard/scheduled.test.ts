@@ -55,14 +55,14 @@ it("over budget: stops, once", async () => {
   expect(error).toHaveBeenCalledWith(expect.stringContaining("BUDGET STOP"));
 
   const f = analytics(usd(30));
-  expect(await check(env, store, new Date(), f)).toBe("already-stopped");
+  expect(await check(env, store, new Date(), f as never)).toBe("already-stopped");
   expect(f).not.toHaveBeenCalled(); // doesn't even ask
 });
 
 it("analytics down: never stops, logs the error", async () => {
   const store = memoryStore();
   const down = jest.fn(async () => new Response("bad gateway", { status: 502 }));
-  expect(await check(env, store, new Date(), down)).toBe("error");
+  expect(await check(env, store, new Date(), down as never)).toBe("error");
   expect(store.save).not.toHaveBeenCalled();
   expect(error).toHaveBeenCalledWith(expect.stringContaining("502"));
 });

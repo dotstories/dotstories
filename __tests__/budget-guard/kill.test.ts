@@ -25,7 +25,7 @@ it("saves the stop first, then turns off the enabled R2 domains and remembers wh
   const state = { custom: true, managed: false };
   const f = cloudflare(state);
   const store = memoryStore();
-  const stop = await kill(env, store, 20.5, new Date("2026-10-14T12:00:00Z"), f);
+  const stop = await kill(env, store, 20.5, new Date("2026-10-14T12:00:00Z"), f as never);
 
   expect(store.save.mock.calls[0][0]).toEqual({ at: "2026-10-14T12:00:00.000Z", estimateUsd: 20.5, disabled: [] }); // first: flag
   expect(stop.disabled).toEqual(["custom:files.dotstories.com"]); // r2.dev was already off: left alone
@@ -37,14 +37,14 @@ it("saves the stop first, then turns off the enabled R2 domains and remembers wh
 
 it("turns off r2.dev too when it was on", async () => {
   const state = { custom: true, managed: true };
-  const stop = await kill(env, memoryStore(), 25, new Date(), cloudflare(state));
+  const stop = await kill(env, memoryStore(), 25, new Date(), cloudflare(state) as never);
   expect(stop.disabled).toEqual(["custom:files.dotstories.com", "managed"]);
   expect(state).toEqual({ custom: false, managed: false });
 });
 
 it("no bucket or domain configured: only the flag", async () => {
   const f = cloudflare({ custom: true, managed: true });
-  const stop = await kill({ ...env, R2_BUCKET: "", R2_DOMAIN: "" }, memoryStore(), 25, new Date(), f);
+  const stop = await kill({ ...env, R2_BUCKET: "", R2_DOMAIN: "" }, memoryStore(), 25, new Date(), f as never);
   expect(stop.disabled).toEqual([]);
   expect(f).not.toHaveBeenCalled();
 });
@@ -52,7 +52,7 @@ it("no bucket or domain configured: only the flag", async () => {
 it("a failing domain call doesn't undo the stop", async () => {
   const store = memoryStore();
   const log = jest.spyOn(console, "error").mockImplementation(() => {});
-  const stop = await kill(env, store, 25, new Date(), cloudflare({ custom: true, managed: true }, true));
+  const stop = await kill(env, store, 25, new Date(), cloudflare({ custom: true, managed: true }, true) as never);
   expect(stop.disabled).toEqual([]);
   expect(await store.get()).not.toBeNull();
   expect(log).toHaveBeenCalled();
@@ -68,7 +68,7 @@ it("d1Store reads and writes the single budget_stop row", async () => {
 
   expect(await store.get()).toEqual({ at: "x", estimateUsd: 20, disabled: ["managed"] });
   await store.save({ at: "y", estimateUsd: 21, disabled: [] });
-  expect(prepare).toHaveBeenLastCalledWith(expect.stringMatching(/INSERT INTO budget_stop .* ON CONFLICT/s));
+  expect(prepare).toHaveBeenLastCalledWith(expect.stringMatching(/INSERT INTO budget_stop [\s\S]* ON CONFLICT/));
   expect(bind).toHaveBeenLastCalledWith("y", 21, "[]");
 
   first.mockResolvedValueOnce(null as never);
