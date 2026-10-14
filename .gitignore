@@ -50,6 +50,11 @@ cloudflare-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+.secrets.json
+.cors.json
+
+# blog build
+/blog/dist/
 
 # python (runner engine)
 .venv/

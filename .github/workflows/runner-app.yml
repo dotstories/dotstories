@@ -43,13 +43,19 @@ jobs:
       - name: Bundle uv
         run: |
           cd runner/app/src-tauri/binaries
-          curl -fsSL -o uv-archive "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${{ matrix.uv }}"
+          url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${{ matrix.uv }}"
+          curl -fsSL -o uv-archive "$url"
+          curl -fsSL -o uv-archive.sha256 "$url.sha256"
+          # Integrity: the archive must match uv's published sha256 before anything is unpacked.
+          expected=$(tr -d '\r' < uv-archive.sha256 | cut -d' ' -f1)
+          actual=$( (sha256sum uv-archive 2>/dev/null || shasum -a 256 uv-archive) | cut -d' ' -f1)
+          if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then echo "::error::uv checksum mismatch"; exit 1; fi
           if [[ "${{ matrix.uv }}" == *.zip ]]; then
             unzip -o -j uv-archive uv.exe && mv uv.exe "uv-${{ matrix.target }}.exe"
           else
             tar -xzf uv-archive --strip-components=1 && mv uv "uv-${{ matrix.target }}" && rm -f uvx
           fi
-          rm uv-archive && ls -la
+          rm uv-archive uv-archive.sha256 && ls -la
 
       - name: Test
         run: ../../../scripts/ci.sh cargo test

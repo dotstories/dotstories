@@ -4,12 +4,14 @@ import { darkFantasy } from "../lib/dots/dark-fantasy";
 import { SYNC_MS } from "../lib/use-dot-state";
 import { mockRouter } from "../jest.setup";
 import { useRunStore } from "../store/run";
+import { saveDotState } from "../actions/dot-state";
 
 beforeEach(() => {
   jest.useFakeTimers();
   localStorage.clear();
   window.history.replaceState(null, "", "/dots/dark-fantasy-thumbnail");
   mockRouter.replace.mockClear();
+  jest.mocked(saveDotState).mockClear();
   useRunStore.setState({ runner: { state: "missing" }, job: null, image: null, error: null, shading: false, checkRunner: async () => {} });
 });
 afterEach(() => jest.useRealTimers());
@@ -56,4 +58,27 @@ it("opening the page doesn't overwrite what was saved", () => {
   render(<DotRunner dot={darkFantasy} />);
   settle();
   expect(JSON.parse(localStorage.getItem("dotstories:dot:dark-fantasy-thumbnail")!)).toEqual({ prompt: "Saved before" });
+});
+
+describe("logged in", () => {
+  it("remembers changes in the account, not in this browser", () => {
+    render(<DotRunner dot={darkFantasy} loggedIn />);
+    fireEvent.change(screen.getByLabelText(/prompt/i), { target: { value: "On every device" } });
+    settle();
+    expect(saveDotState).toHaveBeenCalledWith("dark-fantasy-thumbnail", expect.objectContaining({ prompt: "On every device" }));
+    expect(new URLSearchParams(window.location.search).get("prompt")).toBe("On every device");
+    expect(localStorage.getItem("dotstories:dot:dark-fantasy-thumbnail")).toBeNull();
+  });
+
+  it("doesn't restore this browser's setup (the server brings the account's)", () => {
+    localStorage.setItem("dotstories:dot:dark-fantasy-thumbnail", JSON.stringify({ prompt: "Saved before" }));
+    render(<DotRunner dot={darkFantasy} loggedIn />);
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it("opening the page saves nothing", () => {
+    render(<DotRunner dot={darkFantasy} loggedIn />);
+    settle();
+    expect(saveDotState).not.toHaveBeenCalled();
+  });
 });

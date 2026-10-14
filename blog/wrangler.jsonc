@@ -1,0 +1,12 @@
+// blog.dotstories.com: static files only, its own tiny Worker (no code runs).
+// Custom domain: Cloudflare → Workers → dotstories-blog → Settings → Domains → add blog.dotstories.com
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "dotstories-blog",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "drop-trailing-slash", // /what-is-a-dot.html is served at /what-is-a-dot
+    "not_found_handling": "404-page"
+  }
+}

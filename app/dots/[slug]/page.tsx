@@ -1,12 +1,15 @@
 import { Tag } from "@carbon/react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Comments from "@/components/comments";
 import DotRunner from "@/components/dot-runner";
 import ViewPing from "@/components/view-ping";
 import { latest } from "@/lib/dot";
 import { parseState, toQuery } from "@/lib/dot-state";
 import { dots, findDot } from "@/lib/dots";
 import { shareUrl, timeAgo } from "@/lib/share";
+import { sessionWithSetup } from "@/lib/saved-state";
+import { commentsFor, likedBy } from "@/lib/social";
 import { getStats } from "@/lib/stats";
 
 export const dynamicParams = false; // only known dots; anything else is a 404
@@ -45,8 +48,14 @@ function Meta({ title, children }: { title: string; children: React.ReactNode })
 export default async function DotPage({ params, searchParams }: PageProps<"/dots/[slug]">) {
   const dot = findDot((await params).slug);
   if (!dot) notFound();
-  const initial = parseState(dot, await searchParams); // the URL has the visitor's setup
-  const stats = await getStats(dot.slug);
+  const search = await searchParams;
+  const initial = parseState(dot, search); // the URL has the visitor's setup
+  const session = await sessionWithSetup(dot, `/dots/${dot.slug}`, search);
+  const [stats, liked, comments] = await Promise.all([
+    getStats(dot.slug),
+    likedBy(session?.user.id, dot.slug),
+    commentsFor(dot.slug),
+  ]);
   const link = (href: string, text: string) => (
     <a className="cds--link !text-xs" href={href} target="_blank" rel="noreferrer">
       {text}
@@ -80,14 +89,16 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
         <Meta title="License">{link(dot.license.url, dot.license.name)}</Meta>
       </div>
 
-      <DotRunner key={toQuery(dot, initial)} dot={dot} initial={initial} stats={stats} />
+      <DotRunner
+        key={toQuery(dot, initial)}
+        dot={dot}
+        initial={initial}
+        stats={stats}
+        liked={liked}
+        loggedIn={!!session}
+      />
 
-      <section id="comments" aria-labelledby="comments-title" className="flex flex-col gap-2">
-        <h2 id="comments-title" className="text-lg font-semibold">
-          Comments
-        </h2>
-        {stats.comments === 0 && <p className="text-sm text-[var(--cds-text-secondary)]">No comments yet.</p>}
-      </section>
+      <Comments slug={dot.slug} comments={comments} me={session ? { id: session.user.id } : null} />
     </main>
   );
 }
