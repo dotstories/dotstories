@@ -27,5 +27,11 @@
       "database_id": "local-dotstories",
       "migrations_dir": "migrations"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "dotstories-files"
+    }
   ]
 }

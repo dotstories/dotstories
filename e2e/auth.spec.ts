@@ -1,18 +1,8 @@
-import { execFileSync } from "node:child_process";
 import { expect, type Page, test } from "@playwright/test";
+import { newEmail, PASSWORD, sql } from "./session";
 
 // Real flows on the local D1. Emails are logged, so codes and links are read from the database.
 test.skip(!!process.env.BASE_URL, "needs the local database");
-
-const sql = (query: string): Record<string, string>[] =>
-  JSON.parse(
-    execFileSync("pnpm", ["exec", "wrangler", "d1", "execute", "DB", "--local", "--json", "--command", query], {
-      encoding: "utf8",
-    }),
-  )[0].results;
-
-const newEmail = () => `u${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}@example.com`; // short: usernames come from it
-const PASSWORD = "Good1pass";
 
 async function register(page: Page, email: string, password = PASSWORD) {
   await page.goto("/register");
