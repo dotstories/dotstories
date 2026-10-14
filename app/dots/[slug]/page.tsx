@@ -1,7 +1,6 @@
 import { Tag } from "@carbon/react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { auth } from "@/auth";
 import Comments from "@/components/comments";
 import DotRunner from "@/components/dot-runner";
 import ViewPing from "@/components/view-ping";
@@ -9,6 +8,7 @@ import { latest } from "@/lib/dot";
 import { parseState, toQuery } from "@/lib/dot-state";
 import { dots, findDot } from "@/lib/dots";
 import { shareUrl, timeAgo } from "@/lib/share";
+import { sessionWithSetup } from "@/lib/saved-state";
 import { commentsFor, likedBy } from "@/lib/social";
 import { getStats } from "@/lib/stats";
 
@@ -48,8 +48,9 @@ function Meta({ title, children }: { title: string; children: React.ReactNode })
 export default async function DotPage({ params, searchParams }: PageProps<"/dots/[slug]">) {
   const dot = findDot((await params).slug);
   if (!dot) notFound();
-  const initial = parseState(dot, await searchParams); // the URL has the visitor's setup
-  const session = await auth();
+  const search = await searchParams;
+  const initial = parseState(dot, search); // the URL has the visitor's setup
+  const session = await sessionWithSetup(dot, `/dots/${dot.slug}`, search);
   const [stats, liked, comments] = await Promise.all([
     getStats(dot.slug),
     likedBy(session?.user.id, dot.slug),

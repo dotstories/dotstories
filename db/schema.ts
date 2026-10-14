@@ -104,3 +104,18 @@ export const comments = sqliteTable("comment", {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const dotState = sqliteTable(
+  "dot_state",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    state: text("state").notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.slug] })],
+);
