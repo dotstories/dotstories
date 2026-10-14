@@ -79,6 +79,13 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
       </div>
 
       <DotRunner key={toQuery(dot, initial)} dot={dot} initial={initial} stats={stats} />
+
+      <section id="comments" aria-labelledby="comments-title" className="flex flex-col gap-2">
+        <h2 id="comments-title" className="text-lg font-semibold">
+          Comments
+        </h2>
+        {stats.comments === 0 && <p className="text-sm text-[var(--cds-text-secondary)]">No comments yet.</p>}
+      </section>
     </main>
   );
 }

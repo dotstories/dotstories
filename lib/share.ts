@@ -44,10 +44,11 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ];
 
+const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
 /** "3 hours ago", "yesterday". */
 export function timeAgo(date: string | Date, now = new Date()) {
   const seconds = (new Date(date).getTime() - now.getTime()) / 1000;
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
   for (const [unit, size] of UNITS) {
     if (Math.abs(seconds) >= size) return rtf.format(Math.round(seconds / size), unit);
   }

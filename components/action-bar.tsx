@@ -17,6 +17,7 @@ export default function ActionBar({ dot, state, stats }: { dot: Dot; state: DotS
   const url = shareUrl(dot, state);
   const links = shareLinks(dot, url);
 
+  const open = (href: string) => window.open(href, "_blank", "noopener,noreferrer");
   const copy = async (text: string, done: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(done);
@@ -32,8 +33,8 @@ export default function ActionBar({ dot, state, stats }: { dot: Dot; state: DotS
       <OverflowMenu renderIcon={() => <Share size={20} />} aria-label="Share" iconDescription="Share" size="lg">
         <OverflowMenuItem itemText="Copy link" onClick={() => copy(url, "Link copied")} />
         <OverflowMenuItem itemText="Copy setup" onClick={() => copy(setupJson(dot, state), "Setup copied")} />
-        <OverflowMenuItem itemText="Share on X" href={links.x} target="_blank" rel="noreferrer" />
-        <OverflowMenuItem itemText="Share on Reddit" href={links.reddit} target="_blank" rel="noreferrer" />
+        <OverflowMenuItem itemText="Share on X" onClick={() => open(links.x)} />
+        <OverflowMenuItem itemText="Share on Reddit" onClick={() => open(links.reddit)} />
       </OverflowMenu>
 
       <span className="flex items-center gap-1 px-3 text-sm" title="Likes">
