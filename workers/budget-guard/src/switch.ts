@@ -124,7 +124,11 @@ export async function firewallOn(api: Api, zone: string): Promise<boolean> {
 
 // ---- stop / resume / status ----
 
-/** Flag first (that alone stops uploads and files), then the firewall. A failing firewall step never undoes the flag. */
+/**
+ * Firewall first: it blocks everything at the edge and only needs the Cloudflare API, so it works even when
+ * the Workers or D1 daily limits are used up. Then the D1 row (the app's own 503 + the record of the stop).
+ * Each step is tried on its own; a failure is logged and never skips the other.
+ */
 export async function stopAll(
   api: Api,
   store: Store,
@@ -133,13 +137,16 @@ export async function stopAll(
   now = new Date(),
 ): Promise<Stop> {
   const stop: Stop = { at: now.toISOString(), reason: why.reason, estimateUsd: why.estimateUsd ?? 0, disabled: [] };
-  await store.save({ ...stop, disabled: [] });
   try {
     if (await setFirewall(api, cfg.zone, true)) stop.disabled = ["firewall"];
   } catch (e) {
     console.error(`Kill switch: couldn't turn on the firewall rule: ${(e as Error).message}`);
   }
-  await store.save(stop);
+  try {
+    await store.save(stop);
+  } catch (e) {
+    console.error(`Kill switch: couldn't save the stop in D1 (the firewall still blocks everything): ${(e as Error).message}`);
+  }
   return stop;
 }
 
@@ -152,5 +159,9 @@ export async function resumeAll(api: Api, store: Store, cfg: SwitchConfig) {
 }
 
 export async function status(api: Api, store: Store, cfg: SwitchConfig) {
-  return { stop: await store.get(), firewall: await firewallOn(api, cfg.zone) };
+  const stop = await store.get().catch((e: Error) => {
+    console.error(`Kill switch: couldn't read D1: ${e.message}`);
+    return null;
+  });
+  return { stop, firewall: await firewallOn(api, cfg.zone) };
 }
