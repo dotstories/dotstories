@@ -11,7 +11,7 @@ const sql = (query: string): Record<string, string>[] =>
     }),
   )[0].results;
 
-const newEmail = () => `user${Date.now()}${Math.floor(Math.random() * 1e4)}@example.com`;
+const newEmail = () => `u${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}@example.com`; // short: usernames come from it
 const PASSWORD = "Good1pass";
 
 async function register(page: Page, email: string, password = PASSWORD) {
