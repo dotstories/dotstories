@@ -20,6 +20,8 @@ export function useDotState(dot: Dot, initial: DotState) {
   useEffect(() => {
     if (window.location.search) return;
     const q = toQuery(dot, loadSaved(dot));
+    // Client-side on purpose: localStorage only exists in the browser, the server can't redirect to it.
+    // eslint-disable-next-line react-doctor/nextjs-no-client-side-redirect
     if (q) router.replace(`?${q}`, { scroll: false });
   }, [dot, router]);
 
