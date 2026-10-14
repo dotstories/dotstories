@@ -15,6 +15,7 @@ export default function ProfileForm({ username, image, email }: Props) {
   const file = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const [picture, setPicture] = useState(image);
+  const [name, setName] = useState(username); // the form resets to this after saving
   const [message, setMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
 
   const run = (job: () => Promise<{ error?: string } | void>, done: string) =>
@@ -43,7 +44,7 @@ export default function ProfileForm({ username, image, email }: Props) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center gap-4">
-        <Avatar src={picture} name={username} size={72} />
+        <Avatar src={picture} name={name} size={72} />
         <input
           ref={file}
           type="file"
@@ -59,18 +60,20 @@ export default function ProfileForm({ username, image, email }: Props) {
 
       <form
         className="flex items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const value = new FormData(e.currentTarget).get("username");
-          run(() => saveUsername(value), "Username saved.");
-        }}
+        action={(form) =>
+          run(async () => {
+            const r = await saveUsername(form.get("username"));
+            if (r.username) setName(r.username);
+            return r;
+          }, "Username saved.")
+        }
       >
         <TextInput
           id="username"
           name="username"
           labelText="Username"
           helperText="Letters, numbers, dots and underscores. Up to 20."
-          defaultValue={username}
+          defaultValue={name}
           maxLength={20}
           pattern="[A-Za-z0-9._]{1,20}"
           required
