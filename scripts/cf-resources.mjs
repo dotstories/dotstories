@@ -78,7 +78,7 @@ if (r2) {
 // Secrets. AUTH_SECRET is created once if the Worker doesn't have one.
 // The rest are copied from GitHub secrets when set (Settings → Secrets and variables → Actions).
 const COPIED = [
-  "RESEND_API_KEY",
+  "ZEPTOMAIL_TOKEN", // email (ZeptoMail)
   "AUTH_GOOGLE_ID",
   "AUTH_GOOGLE_SECRET",
   "AUTH_GITHUB_ID",
