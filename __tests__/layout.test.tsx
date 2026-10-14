@@ -26,11 +26,28 @@ describe("Header", () => {
 });
 
 describe("Footer", () => {
-  it("links to the open source code", () => {
+  it("links to the open source code and the socials", () => {
     render(<Footer />);
-    expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute(
-      "href",
-      "https://github.com/Dayonel/dotstories",
-    );
+    expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+  });
+
+  it("contact, blog and legal pages", () => {
+    render(<Footer />);
+    expect(screen.getByRole("link", { name: "info@dotstories.com" })).toHaveAttribute("href", "mailto:info@dotstories.com");
+    expect(screen.getByRole("link", { name: "Blog" })).toHaveAttribute("href", "https://blog.dotstories.com/");
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+    expect(screen.getByRole("link", { name: "Cookies" })).toHaveAttribute("href", "/cookies");
+  });
+
+  it("shows who runs the site", () => {
+    render(<Footer />);
+    expect(screen.getByText(/^© \d{4} DotStories$/)).toBeInTheDocument();
+  });
+
+  it("the logo with dotstories.com links home", () => {
+    render(<Footer />);
+    expect(screen.getByRole("link", { name: "DotStories home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("img", { name: "dotstories.com" })).toBeInTheDocument();
   });
 });

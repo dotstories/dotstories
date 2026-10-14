@@ -59,6 +59,19 @@ export function CredentialsForm({ mode, next }: { mode: "login" | "register"; ne
             Forgot password?
           </Link>
         )}
+        {mode === "register" && (
+          <p className="text-xs text-[var(--cds-text-secondary)]">
+            By creating an account you confirm you are 16 or older and agree to the{" "}
+            <Link className="cds--link !text-xs" href="/terms">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link className="cds--link !text-xs" href="/privacy">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        )}
         <Submit pending={pending}>{mode === "login" ? "Log in" : "Create account"}</Submit>
         <p className="text-sm">
           {mode === "login" ? "No account yet? " : "Already have an account? "}
