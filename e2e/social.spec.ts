@@ -5,6 +5,12 @@ test.skip(!!process.env.BASE_URL, "needs the local database");
 
 const DOT = "/dots/dark-fantasy-thumbnail";
 const likes = async (page: Page) => Number(await page.getByTestId("likes").textContent());
+/** Click, then wait for the server action: the button changes right away (optimistic), the database a moment later. */
+async function clickAndSave(page: Page, name: string) {
+  const saved = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === DOT);
+  await page.getByRole("button", { name }).click();
+  await saved;
+}
 
 test("liking needs a login", async ({ page }) => {
   await page.goto(DOT);
@@ -17,7 +23,7 @@ test("like and unlike; it's saved", async ({ page }) => {
   await page.goto(DOT);
   const before = await likes(page);
 
-  await page.getByRole("button", { name: "Like" }).click();
+  await clickAndSave(page, "Like");
   await expect(page.getByRole("button", { name: "Unlike" })).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => likes(page)).toBe(before + 1);
 
@@ -25,7 +31,7 @@ test("like and unlike; it's saved", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Unlike" })).toBeVisible();
   expect(await likes(page)).toBe(before + 1);
 
-  await page.getByRole("button", { name: "Unlike" }).click();
+  await clickAndSave(page, "Unlike");
   await expect(page.getByRole("button", { name: "Like" })).toBeVisible();
   await page.reload();
   expect(await likes(page)).toBe(before);
