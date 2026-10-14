@@ -31,12 +31,58 @@ def load_job(path) -> Job:
     return Job(d["prompt"], d["style"], d["seed"], d.get("width", 1920), d.get("height", 1088), d.get("steps", 8))
 
 
-def load_pipeline(plan: str):
-    """Download (first time) and load the model, fitted to this computer's memory plan."""
+def load_comfy_transformer(path):
+    """Krea 2 transformer from a ComfyUI file (read in place, never copied).
+
+    ComfyUI's fp8_scaled files store fp8 weights + a scale per layer: turn them back into bf16.
+    """
+    import torch
+    from diffusers import Krea2Transformer2DModel
+    from safetensors import safe_open
+
+    state = {}
+    with safe_open(str(path), framework="pt") as f:
+        keys = set(f.keys())
+        for key in keys:
+            if key == "scaled_fp8" or key.endswith((".scale_weight", ".weight_scale", ".scale_input", ".input_scale",
+                                                    ".comfy_quant")):
+                continue
+            t = f.get_tensor(key)
+            if t.dtype in (torch.float8_e4m3fn, torch.float8_e5m2):
+                base = key[: -len(".weight")] if key.endswith(".weight") else key
+                scale = next((f.get_tensor(s) for s in (f"{base}.scale_weight", f"{base}.weight_scale") if s in keys), None)
+                t = t.to(torch.bfloat16) * (scale.to(torch.bfloat16) if scale is not None else 1)
+            state[key] = t.to(torch.bfloat16)
+    return Krea2Transformer2DModel.from_single_file(state, config=MODEL, subfolder="transformer", torch_dtype=torch.bfloat16)
+
+
+def _from_pretrained(reuse, emit):
+    """Use what's on disk first; download only what's missing."""
     import torch
     from diffusers import Krea2Pipeline
 
-    pipe = Krea2Pipeline.from_pretrained(MODEL, dtype=torch.bfloat16)
+    # safetensors only: pickle model files can run code when loaded.
+    common = dict(dtype=torch.bfloat16, use_safetensors=True)
+    if reuse and reuse.snapshot:
+        try:
+            return Krea2Pipeline.from_pretrained(str(reuse.snapshot), local_files_only=True, **common)
+        except Exception as e:
+            emit({"event": "warning", "message": f"Could not use the Hugging Face copy, downloading instead: {e}"})
+    if reuse and reuse.transformer:
+        try:
+            transformer = load_comfy_transformer(reuse.transformer)
+            # A passed component is not downloaded again.
+            return Krea2Pipeline.from_pretrained(MODEL, transformer=transformer, **common)
+        except Exception as e:
+            emit({"event": "warning", "message": f"Could not use the ComfyUI file, downloading instead: {e}"})
+    return Krea2Pipeline.from_pretrained(MODEL, **common)
+
+
+def load_pipeline(plan: str, reuse=None, emit=lambda e: None):
+    """Load the model (downloading what's missing), fitted to this computer's memory plan."""
+    import torch
+
+    pipe = _from_pretrained(reuse, emit)
     fp8 = dict(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.bfloat16)
 
     if plan == "gpu-bf16":

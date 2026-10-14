@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pillow>=10",
     "psutil>=5.9",
+    "pyyaml>=6",  # ComfyUI extra_model_paths.yaml
 ]
 
 [project.optional-dependencies]
