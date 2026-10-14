@@ -1,0 +1,20 @@
+// Fonts come from next/font (IBM Plex Sans), not Carbon's @font-face.
+@use "@carbon/react" with ($css--font-face: false);
+@use "@carbon/react/scss/theme";
+@use "@carbon/react/scss/themes";
+
+// Dark theme fits dark-fantasy outputs best.
+:root {
+  @include theme.theme(themes.$g100);
+}
+
+body {
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+.container {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
