@@ -2,6 +2,7 @@ import { type Dot, latest, version as findVersion } from "./dot";
 import { type DotState, inputsFor, toQuery } from "./dot-state";
 
 export const SITE = "https://dotstories.com";
+export const BLOG = "https://blog.dotstories.com";
 
 export const dotPath = (dot: Dot) => `/dots/${dot.slug}`;
 
