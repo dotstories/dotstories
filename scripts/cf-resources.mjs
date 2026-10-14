@@ -39,14 +39,17 @@ guard.vars.ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 writeFileSync(GUARD, JSON.stringify(guard, null, 2));
 
 // R2 bucket for uploads (needs "R2 Edit" on the token) + CORS so browsers can upload to it directly.
-// R2 not turned on yet → deploy without it: the site works, uploads answer 503 until R2 is on.
+// EU jurisdiction: files never leave the EU (GDPR). R2 not turned on yet → deploy without it:
+// the site works, uploads answer 503 until R2 is on.
 const bucket = config.r2_buckets[0].bucket_name;
+const jurisdiction = config.r2_buckets[0].jurisdiction; // "eu"
+const inJurisdiction = jurisdiction ? ["--jurisdiction", jurisdiction] : [];
 let r2 = true;
 try {
-  const list = wrangler("r2", "bucket", "list");
+  const list = wrangler("r2", "bucket", "list", ...inJurisdiction);
   if (!list.includes(bucket)) {
-    console.log(`Creating R2 bucket "${bucket}"…`);
-    wrangler("r2", "bucket", "create", bucket);
+    console.log(`Creating R2 bucket "${bucket}" (${jurisdiction ?? "default"} jurisdiction)…`);
+    wrangler("r2", "bucket", "create", bucket, ...inJurisdiction);
   }
 } catch (e) {
   r2 = false;
@@ -57,6 +60,12 @@ try {
   writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
 }
 if (r2) {
+  // Never public on r2.dev: files are served through dotstories.com, behind the kill switch's firewall.
+  try {
+    wrangler("r2", "bucket", "dev-url", "disable", bucket, ...inJurisdiction, "--force");
+  } catch (e) {
+    console.log(`::warning::Could not check that r2.dev is off for ${bucket}: ${String(e.stderr || e.message).split("\n")[0]}`);
+  }
   writeFileSync(
     ".cors.json",
     JSON.stringify({
@@ -69,7 +78,7 @@ if (r2) {
     }),
   );
   try {
-    wrangler("r2", "bucket", "cors", "set", bucket, "--file", ".cors.json", "--force");
+    wrangler("r2", "bucket", "cors", "set", bucket, ...inJurisdiction, "--file", ".cors.json", "--force");
   } catch (e) {
     console.log(`::warning::Could not set R2 CORS (direct uploads may fail, the Worker fallback still works): ${e.message}`);
   }
@@ -96,7 +105,8 @@ try {
 }
 const secrets = Object.fromEntries(COPIED.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
 if (secrets.S3_ACCESS_KEY_ID && r2) {
-  secrets.S3_ENDPOINT = `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  // EU buckets have their own S3 endpoint.
+  secrets.S3_ENDPOINT = `https://${process.env.CLOUDFLARE_ACCOUNT_ID}${jurisdiction ? `.${jurisdiction}` : ""}.r2.cloudflarestorage.com`;
   secrets.S3_BUCKET = bucket;
 }
 if (!existing.includes("AUTH_SECRET")) {

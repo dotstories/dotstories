@@ -13,10 +13,11 @@ if (!["status", "stop", "resume"].includes(action ?? "") || !account || !token) 
 }
 
 const guard = JSON.parse(readFileSync(new URL("../workers/budget-guard/wrangler.jsonc", import.meta.url), "utf8"));
-const cfg = { zone: guard.vars.ZONE, bucket: guard.vars.R2_BUCKET, r2Domain: guard.vars.R2_DOMAIN };
+const cfg = { zone: guard.vars.ZONE };
+const files = guard.vars.FILES_DOMAIN; // R2 custom domain, once there is one
 const api = cfApi(token);
 const store = restStore(api, account, guard.d1_databases[0].database_name);
-const sites = [`https://${cfg.zone}/`, `https://blog.${cfg.zone}/`, ...(cfg.r2Domain ? [`https://${cfg.r2Domain}/`] : [])];
+const sites = [`https://${cfg.zone}/`, `https://blog.${cfg.zone}/`, ...(files ? [`https://${files}/`] : [])];
 
 const report: string[] = [];
 const say = (line = "") => {
@@ -49,11 +50,11 @@ async function verify(blocked: boolean) {
 
 let ok = true;
 if (action === "stop") {
-  const stop = await stopAll(api, account, store, cfg, { reason: "manual" });
+  const stop = await stopAll(api, store, cfg, { reason: "manual" });
   say(`## ⛔ Stopped\n\nTurned off: ${stop.disabled.join(", ") || "app only"}\n`);
   ok = (await verify(true)) && stop.disabled.includes("firewall");
 } else if (action === "resume") {
-  const stop = await resumeAll(api, account, store, cfg);
+  const stop = await resumeAll(api, store, cfg);
   say(`## ✅ Resumed\n\n${stop ? `Was stopped ${stop.at} (${stop.reason}).` : "Wasn't stopped."}\n`);
   ok = await verify(false);
 } else {

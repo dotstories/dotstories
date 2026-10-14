@@ -6,8 +6,6 @@ const env = {
   BUDGET_USD: "19",
   ACCOUNT_ID: "acc",
   ZONE: "dotstories.com",
-  R2_BUCKET: "",
-  R2_DOMAIN: "",
   BILLING_DAY: "1",
   WORKERS_PAID: "false",
   CF_API_TOKEN: "t",

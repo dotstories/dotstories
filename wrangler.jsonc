@@ -33,7 +33,8 @@
   "r2_buckets": [
     {
       "binding": "FILES",
-      "bucket_name": "dotstories-files"
+      "bucket_name": "dotstories-files",
+      "jurisdiction": "eu"
     }
   ]
 }

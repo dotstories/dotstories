@@ -24,8 +24,7 @@
     "BUDGET_USD": "19",
     "ACCOUNT_ID": "",
     "ZONE": "dotstories.com",
-    "R2_BUCKET": "dotstories-files",
-    "R2_DOMAIN": "",
+    "FILES_DOMAIN": "",
     "BILLING_DAY": "1",
     "WORKERS_PAID": "false"
   },

@@ -9,8 +9,6 @@ export type Config = {
   BUDGET_USD: string;
   ACCOUNT_ID: string;
   ZONE: string;
-  R2_BUCKET: string;
-  R2_DOMAIN: string;
   BILLING_DAY: string;
   WORKERS_PAID: string;
   CF_API_TOKEN: string;
@@ -49,8 +47,7 @@ export async function check(env: Config, store: Store, now = new Date(), f: type
 
   if (cost >= budget) {
     const api: Api = cfApi(env.CF_API_TOKEN, f);
-    const cfg = { zone: env.ZONE, bucket: env.R2_BUCKET, r2Domain: env.R2_DOMAIN };
-    const stop = await stopAll(api, env.ACCOUNT_ID, store, cfg, { reason: "budget", estimateUsd: cost }, now);
+    const stop = await stopAll(api, store, { zone: env.ZONE }, { reason: "budget", estimateUsd: cost }, now);
     console.error(`KILL SWITCH (budget): $${cost.toFixed(2)} ≥ $${budget}. Stopped: ${stop.disabled.join(", ") || "app only"}`);
     return "stopped";
   }
