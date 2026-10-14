@@ -66,7 +66,8 @@ test("uploads: login required, size limits, only your own folder", async ({ page
 test("delete your account: personal data removed, comment threads kept, logged out", async ({ browser }) => {
   const page = await browser.newPage();
   const { email, username } = await signUp(page);
-  await page.goto("/dots/dark-fantasy-thumbnail");
+  const DOT = "/dots/dark-fantasy-orchestral"; // not the one social.spec uses: no crossed comments
+  await page.goto(DOT);
   const text = `Bye for now ${Date.now()}`;
   await page.getByLabel("Add a comment").fill(text);
   await page.getByRole("button", { name: "Post" }).click();
@@ -75,12 +76,12 @@ test("delete your account: personal data removed, comment threads kept, logged o
   // Someone replies to it.
   const other = await browser.newPage();
   await signUp(other);
-  await other.goto("/dots/dark-fantasy-thumbnail");
+  await other.goto(DOT);
   const mine = other.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: text });
   await mine.getByRole("button", { name: "Reply" }).click();
   const reply = `See you ${Date.now()}`;
   await other.getByLabel("Reply", { exact: true }).fill(reply);
-  await other.getByRole("button", { name: "Reply" }).last().click();
+  await mine.getByRole("button", { name: "Reply" }).last().click();
   await expect(other.getByText(reply)).toBeVisible();
 
   await page.goto("/profile");
