@@ -23,15 +23,16 @@ try {
   fail(denied ? "Can't list D1 databases: add 'D1 Edit' to the CLOUDFLARE_API_TOKEN permissions." : "Can't list D1 databases.", e);
 }
 
-// EU jurisdiction: the data never leaves the EU (GDPR). It can only be set when a database is created.
-const D1_JURISDICTION = "eu";
-// The first database ("dotstories") was created without one. Moving = copying it once into the EU database.
-const OLD_D1 = "dotstories";
+// Western Europe: close to us (NL), so fewer ms per query. It's a location hint, set only when the database is
+// created. (An EU-jurisdiction database can't pick a region: ours landed in Eastern Europe.)
+const D1_LOCATION = "weur";
+// The previous database. Moving = copying it once into the new one.
+const OLD_D1 = "dotstories-eu";
 
 let db = databases.find((x) => x.name === d1.database_name);
 if (!db) {
-  console.log(`Creating D1 database "${d1.database_name}" (${D1_JURISDICTION} jurisdiction)…`);
-  wrangler("d1", "create", d1.database_name, "--jurisdiction", D1_JURISDICTION);
+  console.log(`Creating D1 database "${d1.database_name}" (location ${D1_LOCATION})…`);
+  wrangler("d1", "create", d1.database_name, "--location", D1_LOCATION);
   db = json(wrangler("d1", "list", "--json")).find((x) => x.name === d1.database_name);
 }
 d1.database_id = db.uuid;
@@ -60,7 +61,15 @@ if (databases.some((x) => x.name === OLD_D1) && isEmpty()) {
   } finally {
     writeFileSync(".d1-copy.sql", ""); // personal data: don't leave it on the runner
   }
-  console.log(`::notice title=Database moved to the EU::Copied ${OLD_D1} → ${d1.database_name}. Delete "${OLD_D1}" in Cloudflare → D1 once everything works.`);
+  console.log(`::notice title=Database moved::Copied ${OLD_D1} → ${d1.database_name}. Delete "${OLD_D1}" in Cloudflare → D1 once everything works.`);
+}
+
+// Where it really runs (a hint is not a promise). Shown on every deploy.
+try {
+  const info = json(wrangler("d1", "info", d1.database_name, "--json"));
+  console.log(`::notice title=Database region::${d1.database_name} runs in ${info.running_in_region ?? "an unknown region (see Cloudflare → D1)"}`);
+} catch {
+  // Only informational.
 }
 
 console.log(wrangler("d1", "migrations", "apply", d1.binding, "--remote"));
