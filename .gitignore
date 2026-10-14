@@ -60,3 +60,7 @@ cloudflare-env.d.ts
 .venv/
 __pycache__/
 .pytest_cache/
+
+# budget guard local state
+/workers/budget-guard/.wrangler/
+/.guard-build/

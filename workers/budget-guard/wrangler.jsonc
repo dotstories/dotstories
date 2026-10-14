@@ -1,0 +1,29 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "dotstories-budget-guard",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dotstories",
+      "database_id": "local-dotstories",
+      "migrations_dir": "../../migrations"
+    }
+  ],
+  "vars": {
+    "BUDGET_USD": "19",
+    "ACCOUNT_ID": "",
+    "R2_BUCKET": "dotstories-files",
+    "R2_DOMAIN": "",
+    "BILLING_DAY": "1",
+    "WORKERS_PAID": "false"
+  }
+}
