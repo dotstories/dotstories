@@ -17,7 +17,7 @@
     "preview": "node scripts/patch-opennext.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/patch-opennext.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "lint:react": "react-doctor . --fail-on error --offline --verbose --yes --no-ami"
+    "lint:react": "react-doctor . --blocking warning --offline --verbose --yes --no-ami"
   },
   "dependencies": {
     "@carbon/icons-react": "^11.80.0",

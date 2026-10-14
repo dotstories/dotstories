@@ -52,7 +52,9 @@ export const useRunStore = create<RunState>((set, get) => ({
     if (!postSteps.length) return set({ image: imageUrl(id) });
     set({ shading: true });
     try {
-      let image = await (await fetch(imageUrl(id))).blob();
+      const res = await fetch(imageUrl(id));
+      if (!res.ok) throw new Error(`Could not get the image from the app (${res.status})`);
+      let image = await res.blob();
       for (const step of postSteps) image = await runPostStep(step, image);
       set({ image: URL.createObjectURL(image) });
     } catch (e) {

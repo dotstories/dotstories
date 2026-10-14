@@ -2,11 +2,8 @@
 
 import { PauseFilled, PlayFilledAlt } from "@carbon/icons-react";
 import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
+import { formatTime } from "@/lib/time";
 
-export const formatTime = (s: number) => {
-  const t = Number.isFinite(s) ? Math.max(0, Math.floor(s)) : 0;
-  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
-};
 
 /** Player bar like the Stable Audio guide: play square · title · time, the bar fills as it plays. */
 export default function AudioPlayer({ src, title }: { src: string; title: string }) {

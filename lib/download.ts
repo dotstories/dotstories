@@ -17,3 +17,14 @@ export function detectOS(userAgent: string): OS {
   if (/Macintosh|Mac OS X/i.test(userAgent)) return "mac";
   return "other";
 }
+
+let checked: Promise<boolean> | null = null;
+
+/** Is a release published? Asked once per page load. Only a 404 means "not yet". */
+export const releaseExists = () =>
+  (checked ??= fetch(RELEASE_API).then(
+    (r) => r.status !== 404, // rate-limited or GitHub down: offer the links anyway
+    () => true,
+  ));
+
+export const resetReleaseCheck = () => (checked = null); // tests

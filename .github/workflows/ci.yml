@@ -11,14 +11,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  # PRs may change dependencies: refresh the lockfile and commit it back.
+  # Runs no package code (--ignore-scripts): the write token never sits next to untrusted code.
+  lockfile:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
-      contents: write # lets the lockfile step push to PR branches
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.head_ref || github.ref }}
+          ref: ${{ github.head_ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: scripts/ci.sh pnpm install --lockfile-only --ignore-scripts
+      - name: Commit updated lockfile
+        run: |
+          if ! git diff --quiet pnpm-lock.yaml pnpm-workspace.yaml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: update pnpm lockfile" pnpm-lock.yaml pnpm-workspace.yaml
+            git push
+          fi
+
+  # Builds and tests with a read-only token and no stored credentials.
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
@@ -26,24 +52,15 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      # PRs may change dependencies: refresh the lockfile and commit it back.
-      # main always installs exactly what the lockfile says.
+      # main installs exactly the lockfile; PRs may be one step ahead of it.
       - name: Install
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$EVENT" = "pull_request" ]; then
             scripts/ci.sh pnpm install --no-frozen-lockfile
           else
             scripts/ci.sh pnpm install --frozen-lockfile
-          fi
-
-      - name: Commit updated lockfile
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          if ! git diff --quiet pnpm-lock.yaml pnpm-workspace.yaml; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: update pnpm lockfile" pnpm-lock.yaml pnpm-workspace.yaml
-            git push
           fi
 
       - run: scripts/ci.sh pnpm lint

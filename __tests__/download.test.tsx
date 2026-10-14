@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import DownloadApp from "../components/download-app";
-import { detectOS, DOWNLOADS } from "../lib/download";
+import { detectOS, DOWNLOADS, resetReleaseCheck } from "../lib/download";
 
 describe("detectOS", () => {
   it("tells Windows, Mac, phones and the rest apart", () => {
@@ -13,6 +13,7 @@ describe("detectOS", () => {
 });
 
 const release = (exists: boolean) => {
+  resetReleaseCheck();
   global.fetch = jest.fn(async () => ({ ok: exists, status: exists ? 200 : 404 })) as unknown as typeof fetch;
 };
 

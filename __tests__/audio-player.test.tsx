@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import AudioPlayer, { formatTime } from "../components/audio-player";
+import AudioPlayer from "../components/audio-player";
+import { formatTime } from "../lib/time";
 
 beforeAll(() => {
   // jsdom has no media playback

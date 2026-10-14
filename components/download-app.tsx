@@ -2,8 +2,8 @@
 
 import { Download } from "@carbon/icons-react";
 import { Button, InlineLoading } from "@carbon/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { detectOS, DOWNLOADS, type OS, RELEASE_API } from "@/lib/download";
+import { Suspense, use, useSyncExternalStore } from "react";
+import { detectOS, DOWNLOADS, type OS, releaseExists } from "@/lib/download";
 
 const STEPS: Record<"windows" | "mac", string[]> = {
   windows: [
@@ -22,19 +22,22 @@ const STEPS: Record<"windows" | "mac", string[]> = {
 
 const noSubscribe = () => () => {};
 
+const loading = <InlineLoading description="Checking the latest version…" />;
+
 export default function DownloadApp({ os: given }: { os?: OS }) {
   // The browser's OS: null while rendering on the server, so no hydration mismatch.
   const detected = useSyncExternalStore(noSubscribe, () => detectOS(navigator.userAgent), () => null);
   const os = given ?? detected;
-  const [release, setRelease] = useState<"checking" | "ready" | "missing">("checking");
+  if (!os) return loading; // server: the release check only runs in the browser
+  return (
+    <Suspense fallback={loading}>
+      <Choice os={os} />
+    </Suspense>
+  );
+}
 
-  useEffect(() => {
-    fetch(RELEASE_API)
-      .then((r) => setRelease(r.ok ? "ready" : "missing"))
-      .catch(() => setRelease("ready")); // GitHub unreachable or rate-limited: offer the links anyway
-  }, []);
-
-  if (!os || release === "checking") return <InlineLoading description="Checking the latest version…" />;
+function Choice({ os }: { os: OS }) {
+  const released = use(releaseExists());
 
   if (os === "phone")
     return (
@@ -44,7 +47,7 @@ export default function DownloadApp({ os: given }: { os?: OS }) {
       </p>
     );
 
-  if (release === "missing")
+  if (!released)
     return <p>The first release is coming soon. The app is being tested on Windows and Mac.</p>;
 
   const main = os === "mac" ? "mac" : "windows";
