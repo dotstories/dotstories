@@ -1,13 +1,24 @@
 import { execFileSync } from "node:child_process";
 import { expect, type Page } from "@playwright/test";
 
+const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
 /** Query the local D1 database (emails are logged locally, so codes are read from here). */
-export const sql = (query: string): Record<string, string>[] =>
-  JSON.parse(
-    execFileSync("pnpm", ["exec", "wrangler", "d1", "execute", "DB", "--local", "--json", "--command", query], {
-      encoding: "utf8",
-    }),
-  )[0].results;
+export function sql(query: string): Record<string, string>[] {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const out = execFileSync("pnpm", ["exec", "wrangler", "d1", "execute", "DB", "--local", "--json", "--command", query], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      return JSON.parse(out)[0].results;
+    } catch (e) {
+      // The running Worker may hold the SQLite lock for a moment.
+      if (attempt >= 5 || !String((e as { stderr?: string }).stderr ?? e).includes("SQLITE_BUSY")) throw e;
+      pause(200 * attempt);
+    }
+  }
+}
 
 export const PASSWORD = "Good1pass";
 export const newEmail = () => `u${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}@example.com`; // short: usernames come from it
