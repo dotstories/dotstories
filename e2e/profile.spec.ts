@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { signUp } from "./session";
+import { signUp, sql } from "./session";
 
 test.skip(!!process.env.BASE_URL, "needs the local database");
 
@@ -61,4 +62,68 @@ test("uploads: login required, size limits, only your own folder", async ({ page
     data: Buffer.from("x"),
   });
   expect(other.status()).toBe(403);
+});
+
+test("delete your account: personal data removed, comment threads kept, logged out", async ({ browser }) => {
+  const page = await browser.newPage();
+  const { email, username } = await signUp(page);
+  const DOT = "/dots/dark-fantasy-orchestral"; // not the one social.spec uses: no crossed comments
+  await page.goto(DOT);
+  const text = `Bye for now ${Date.now()}`;
+  await page.getByLabel("Add a comment").fill(text);
+  await page.getByRole("button", { name: "Post" }).click();
+  await expect(page.getByText(text)).toBeVisible();
+
+  // Someone replies to it.
+  const other = await browser.newPage();
+  await signUp(other);
+  await other.goto(DOT);
+  const mine = other.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: text });
+  await mine.getByRole("button", { name: "Reply" }).click();
+  const reply = `See you ${Date.now()}`;
+  await other.getByLabel("Reply", { exact: true }).fill(reply);
+  await mine.getByRole("button", { name: "Reply" }).last().click();
+  await expect(other.getByText(reply)).toBeVisible();
+
+  await page.goto("/profile");
+  await page.getByLabel(`Type ${username} to confirm`).fill("not-me");
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Type your username exactly" })).toBeVisible();
+
+  await page.getByLabel(`Type ${username} to confirm`).fill(username);
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page).toHaveURL(/\/\?account=deleted$/);
+  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+
+  // Nothing that identifies the person is left; the row stays for what others rely on.
+  await expect.poll(() => sql(`SELECT id FROM user WHERE email = '${email}' OR username = '${username}'`)).toHaveLength(0);
+  expect(sql(`SELECT text FROM comment WHERE text = '${text}'`)).toHaveLength(0);
+
+  // The reply stays, under a deleted comment.
+  await other.reload();
+  await expect(other.getByText(reply)).toBeVisible();
+  await expect(other.getByRole("article", { name: "Comment by Deleted user" }).first()).toContainText("[deleted]");
+
+  // The email can't log in any more, and can't sign up again.
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("Good1pass");
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Wrong email or password." })).toBeVisible();
+
+  await page.goto("/register");
+  await page.getByLabel("Email").fill(email.toUpperCase());
+  await page.getByLabel("Password", { exact: true }).fill("Good1pass");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "belonged to a deleted account" })).toBeVisible();
+
+  // Nobody else can take the username.
+  await other.goto("/profile");
+  await other.getByLabel("Username").fill(username);
+  await other.getByRole("button", { name: "Save" }).click();
+  await expect(other.getByRole("alert").filter({ hasText: "That username is taken." })).toBeVisible();
+
+  // Kept only as hashes.
+  const hash = (kind: string, value: string) => createHash("sha256").update(`dotstories:${kind}:${value.toLowerCase()}`).digest("hex");
+  expect(sql(`SELECT hash FROM retired WHERE hash IN ('${hash("email", email)}', '${hash("username", username)}')`)).toHaveLength(2);
 });

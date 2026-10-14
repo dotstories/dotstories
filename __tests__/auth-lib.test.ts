@@ -2,6 +2,7 @@
 import { codeMatches, newCode } from "../lib/codes";
 import { hashPassword, verifyPassword } from "../lib/password";
 import { LoginSchema, NewPasswordSchema, RegisterSchema } from "../lib/auth-schemas";
+import { retiredHash } from "../lib/retired-hash";
 import { USERNAME, suggestUsername } from "../lib/username";
 
 describe("passwords", () => {
@@ -33,6 +34,12 @@ describe("usernames", () => {
     for (const bad of ["", "x".repeat(21), "da yo", "dayo!", "dayo-nel", "ñandu"]) expect(USERNAME.safeParse(bad).success).toBe(false);
   });
 
+  it("deleted_… is reserved for deleted accounts", () => {
+    expect(USERNAME.safeParse("deleted_abc").success).toBe(false);
+    expect(USERNAME.safeParse("Deleted_x").success).toBe(false);
+    expect(USERNAME.safeParse("deletedfan").success).toBe(true);
+  });
+
   it("suggests one from an email or name", () => {
     expect(suggestUsername("nestor.p@example.com")).toBe("nestor.p");
     expect(suggestUsername("Néstor Plysyuk")).toBe("nestor_plysyuk");
@@ -50,5 +57,15 @@ describe("forms", () => {
     expect(RegisterSchema.safeParse({ email: "a@b.co", password: "alllowercase1" }).success).toBe(false);
     expect(RegisterSchema.safeParse({ email: "a@b.co", password: "Good1pass" }).success).toBe(true);
     expect(NewPasswordSchema.safeParse({ token: "t", password: "Good1pass" }).success).toBe(true);
+  });
+});
+
+describe("retired emails and usernames", () => {
+  it("are stored as a SHA-256 hash, the same for any case or spacing", async () => {
+    const hash = await retiredHash("email", "Me@Example.com ");
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(hash).not.toContain("example");
+    expect(await retiredHash("email", "me@example.com")).toBe(hash);
+    expect(await retiredHash("username", "me@example.com")).not.toBe(hash); // kinds never collide
   });
 });

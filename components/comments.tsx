@@ -61,7 +61,11 @@ function Comment({ slug, comment, me, isReply = false }: { slug: string; comment
       <Avatar src={comment.user.image} name={comment.user.username} size={36} />
       <div className="flex flex-1 flex-col gap-1">
         <span className="text-sm font-semibold">{comment.user.username}</span>
-        <p className="whitespace-pre-wrap text-sm">{comment.text}</p>
+        {comment.deleted ? (
+          <p className="text-sm italic text-[var(--cds-text-secondary)]">[deleted]</p>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm">{comment.text}</p>
+        )}
         <div className="flex items-center gap-4 text-xs text-[var(--cds-text-secondary)]">
           <time dateTime={comment.createdAt} suppressHydrationWarning>{timeAgo(comment.createdAt)}</time>
           {me && !isReply && (

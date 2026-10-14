@@ -6,6 +6,7 @@ import { getDb } from "./db";
 export type CommentView = {
   id: string;
   text: string;
+  deleted: boolean; // its author deleted their account
   createdAt: string;
   user: { id: string; username: string; image: string | null };
   replies: CommentView[];
@@ -29,6 +30,7 @@ export async function commentsFor(slug: string): Promise<CommentView[]> {
       text: comments.text,
       parentId: comments.parentId,
       createdAt: comments.createdAt,
+      deletedAt: comments.deletedAt,
       userId: users.id,
       username: users.username,
       image: users.image,
@@ -41,9 +43,10 @@ export async function commentsFor(slug: string): Promise<CommentView[]> {
 
   const view = (r: (typeof rows)[number]): CommentView => ({
     id: r.id,
-    text: r.text,
+    text: r.deletedAt ? "" : r.text,
+    deleted: !!r.deletedAt,
     createdAt: r.createdAt.toISOString(),
-    user: { id: r.userId, username: r.username, image: r.image },
+    user: r.deletedAt ? { id: r.userId, username: "Deleted user", image: null } : { id: r.userId, username: r.username, image: r.image },
     replies: [],
   });
   const top = new Map(rows.filter((r) => !r.parentId).map((r) => [r.id, view(r)]));

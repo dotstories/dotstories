@@ -55,7 +55,7 @@ test("comment, reply, delete your own; others can't delete it", async ({ browser
 
   await mine.getByRole("button", { name: "Reply" }).click();
   await page.getByLabel("Reply", { exact: true }).fill("Answering myself");
-  await page.getByRole("button", { name: "Reply" }).last().click();
+  await mine.getByRole("button", { name: "Reply" }).last().click(); // the form's button, under this comment
   await expect(page.getByText("Answering myself")).toBeVisible();
 
   // Someone else sees it but has no Delete on it.

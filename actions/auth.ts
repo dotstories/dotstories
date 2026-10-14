@@ -10,6 +10,9 @@ import { getDb } from "@/lib/db";
 import { sendCode, sendResetLink } from "@/lib/mail";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { getUserByEmail, uniqueUsername } from "@/lib/users";
+import { isRetired } from "@/lib/retired";
+
+const DELETED_EMAIL = "This email belonged to a deleted account and can't be used again.";
 
 // These actions are the sign-in flow itself: they run before there is a session.
 export type Result = { ok?: true; verify?: true; error?: string };
@@ -42,7 +45,8 @@ export async function register(values: unknown): Promise<Result> {
   if (!parsed.success) return firstError(parsed.error);
   const { email, password } = parsed.data;
 
-  const existing = await getUserByEmail(email);
+  const [existing, retired] = await Promise.all([getUserByEmail(email), isRetired("email", email)]);
+  if (retired) return { error: DELETED_EMAIL };
   if (existing?.emailVerified) return { error: "This email already has an account. Log in instead." };
   if (existing) {
     // Signed up before but never verified: keep the account, take the new password.
