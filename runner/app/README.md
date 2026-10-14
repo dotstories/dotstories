@@ -23,6 +23,19 @@ cd src-tauri && cargo test
 cd .. && npx @tauri-apps/cli@2 build
 ```
 
+## Release
+
+```bash
+git tag runner-v0.1.0 && git push origin runner-v0.1.0
+```
+
+Builds both installers and publishes a GitHub Release with stable names, so these links always point to the newest app:
+
+- https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Windows.exe
+- https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Mac.dmg
+
+Bump `version` in `src-tauri/tauri.conf.json` and `Cargo.toml` first.
+
 ## Not yet
 
 - Code signing (Apple notarization, Windows signing): unsigned builds show a warning.

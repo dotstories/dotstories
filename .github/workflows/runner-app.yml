@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths: ["runner/**", ".github/workflows/runner-app.yml"]
   workflow_dispatch:
+  workflow_call: # used by release.yml
 
 concurrency:
   group: runner-app-${{ github.ref }}
