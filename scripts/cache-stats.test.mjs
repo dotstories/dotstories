@@ -26,6 +26,14 @@ test("errors and missing cache headers are visible", () => {
   assert.equal(s.hitRatio, 0);
 });
 
+test("a bot check (Bot Fight Mode) is reported, with what to do", () => {
+  const s = summarize([{ ...r(null, 10, "a-AMS", 403), mitigated: "challenge" }, r("HIT", 10)]);
+  assert.equal(s.challenged, 1);
+  assert.match(report("https://x", s, 0.9), /bot check.*node scripts\/cache-test\.mjs/);
+  assert.equal(summarize([r("HIT", 10)]).challenged, 0);
+  assert.doesNotMatch(report("https://x", summarize([r("HIT", 10)]), 0.9), /bot check/);
+});
+
 test("report says pass/fail against the goal", () => {
   const good = summarize(Array.from({ length: 10 }, () => r("HIT", 20)));
   assert.match(report("https://x", good, 0.9), /^## ✅ Cache test: 100.0%/);

@@ -20,6 +20,7 @@ export function summarize(results) {
   const ms = results.map((r) => r.ms).sort((a, b) => a - b);
   return {
     total: results.length,
+    challenged: results.filter((r) => r.mitigated === "challenge").length,
     errors: results.filter((r) => !(r.status >= 200 && r.status < 400)).length,
     byCache,
     hitRatio: results.length ? fromCache / results.length : 0,
@@ -44,5 +45,11 @@ export function report(url, s, minRatio) {
     `Data centers: ${Object.entries(s.colos).map(([k, v]) => `${k} (${v})`).join(", ")}`,
     "",
     `Only MISS / EXPIRED requests reached R2 (and cost a read). Goal: ≥ ${pct(minRatio)} from cache.`,
+    ...(s.challenged
+      ? [
+          "",
+          `⚠️ ${s.challenged} requests got a Cloudflare bot check (Bot Fight Mode blocks GitHub's servers). Run the test from your own computer instead: \`node scripts/cache-test.mjs\``,
+        ]
+      : []),
   ].join("\n");
 }

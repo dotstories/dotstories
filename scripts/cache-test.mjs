@@ -20,7 +20,13 @@ async function one() {
   try {
     const res = await fetch(url, { headers: { "User-Agent": "dotstories-cache-test" } });
     await res.arrayBuffer(); // download the body, like a browser
-    return { status: res.status, cache: res.headers.get("cf-cache-status"), ray: res.headers.get("cf-ray"), ms: Math.round(performance.now() - start) };
+    return {
+      status: res.status,
+      cache: res.headers.get("cf-cache-status"),
+      ray: res.headers.get("cf-ray"),
+      mitigated: res.headers.get("cf-mitigated"), // "challenge": Bot Fight Mode stopped us, not the cache
+      ms: Math.round(performance.now() - start),
+    };
   } catch {
     return { status: 0, cache: null, ray: null, ms: Math.round(performance.now() - start) };
   }
