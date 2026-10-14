@@ -1,4 +1,4 @@
-import { checkUpload, extensionFor, kindOf, LIMITS, MB, newKey } from "../lib/uploads";
+import { checkUpload, extensionFor, fileUrl, keyFromUrl, kindOf, LIMITS, MB, newKey } from "../lib/uploads";
 
 describe("upload limits per type", () => {
   it("5 MB images, 100 MB music, 500 MB video", () => {
@@ -28,5 +28,22 @@ describe("upload limits per type", () => {
     expect(key).toMatch(/^u\/user-1\/[0-9a-f-]{36}\.webp$/);
     expect(newKey("user-1", "image/webp")).not.toBe(key);
     expect(extensionFor("audio/mpeg")).toBe("mp3");
+  });
+});
+
+describe("file addresses", () => {
+  const CDN = "https://files.dotstories.com";
+
+  it("on the files CDN when set up, through the Worker otherwise", () => {
+    expect(fileUrl("u/1/a.webp", CDN)).toBe("https://files.dotstories.com/u/1/a.webp");
+    expect(fileUrl("u/1/a.webp", `${CDN}/`)).toBe("https://files.dotstories.com/u/1/a.webp");
+    expect(fileUrl("u/1/a.webp", "")).toBe("/files/u/1/a.webp");
+  });
+
+  it("the key comes back from either address; anything else is not ours", () => {
+    expect(keyFromUrl("/files/u/1/a.webp", CDN)).toBe("u/1/a.webp");
+    expect(keyFromUrl("https://files.dotstories.com/u/1/a.webp", CDN)).toBe("u/1/a.webp");
+    expect(keyFromUrl("https://lh3.googleusercontent.com/a/x", CDN)).toBeNull();
+    expect(keyFromUrl(null, CDN)).toBeNull();
   });
 });

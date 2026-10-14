@@ -57,9 +57,34 @@ try {
     `::warning title=R2 is off::Uploads are paused. Turn R2 on once (Cloudflare dashboard → R2 Object Storage) and give CLOUDFLARE_API_TOKEN 'Workers R2 Storage Edit'. (${String(e.stderr || e.message).split("\n")[0]})`,
   );
   delete config.r2_buckets;
+  if (config.vars) config.vars.FILES_ORIGIN = "";
   writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
 }
 if (r2) {
+  // files.dotstories.com: R2 behind Cloudflare's cache (no Worker per file). Attached by hand once
+  // (bucket → Settings → Custom Domains). Until then the site serves files through the Worker at /files.
+  const filesHost = new URL(config.vars?.FILES_ORIGIN || "https://none").host;
+  let attached = false;
+  try {
+    attached = wrangler("r2", "bucket", "domain", "list", bucket, ...inJurisdiction).includes(filesHost);
+  } catch {
+    // listing failed: treat as not attached
+  }
+  if (!attached && config.vars?.FILES_ORIGIN) {
+    console.log(`::warning title=Files CDN::${filesHost} isn't attached to ${bucket} yet: files go through the Worker (/files) for now.`);
+    config.vars.FILES_ORIGIN = "";
+    writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
+  }
+  // A known file for the cache test (scripts/cache-test.mjs). Same bytes every deploy.
+  try {
+    wrangler(
+      "r2", "object", "put", `${bucket}/cache-test/weeping-gate.jpg`, "--file", "public/demo/weeping-gate.jpg",
+      "--content-type", "image/jpeg", "--cache-control", "public, max-age=31536000, immutable", ...inJurisdiction, "--remote",
+    );
+  } catch (e) {
+    console.log(`::warning::Could not upload the cache test file: ${String(e.stderr || e.message).split("\n")[0]}`);
+  }
+
   // Never public on r2.dev: files are served through dotstories.com, behind the kill switch's firewall.
   try {
     wrangler("r2", "bucket", "dev-url", "disable", bucket, ...inJurisdiction, "--force");
@@ -71,7 +96,7 @@ if (r2) {
     JSON.stringify({
       rules: [
         {
-          allowed: { origins: ["https://dotstories.com", "https://www.dotstories.com"], methods: ["PUT"], headers: ["content-type"] },
+          allowed: { origins: ["https://dotstories.com", "https://www.dotstories.com"], methods: ["PUT"], headers: ["content-type", "cache-control"] },
           maxAgeSeconds: 3600,
         },
       ],

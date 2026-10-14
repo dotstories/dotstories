@@ -39,13 +39,14 @@ async function verify(blocked: boolean) {
   let codes: number[] = [];
   for (let i = 0; i < 18; i++) {
     codes = await Promise.all(sites.map(probe));
-    if (codes.every((c) => (c === 403) === blocked)) break;
+    if (codes.every((c) => c === 0 || (c === 403) === blocked)) break; // 0: not set up yet, nothing to block
     await new Promise((r) => setTimeout(r, 5000));
   }
   say("| Site | HTTP | |");
   say("|---|---|---|");
-  sites.forEach((s, i) => say(`| ${s} | ${codes[i] || "unreachable"} | ${codes[i] === 403 ? "⛔ blocked" : "✅ open"} |`));
-  return codes.every((c) => (c === 403) === blocked);
+  const mark = (c: number) => (c === 0 ? "⚠️ not reachable (not set up yet?)" : c === 403 ? "⛔ blocked" : "✅ open");
+  sites.forEach((s, i) => say(`| ${s} | ${codes[i] || "-"} | ${mark(codes[i])} |`));
+  return codes.some((c) => c !== 0) && codes.every((c) => c === 0 || (c === 403) === blocked);
 }
 
 let ok = true;

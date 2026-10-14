@@ -2,7 +2,7 @@ import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { AwsClient } from "aws4fetch";
 import { budgetStopped } from "./budget";
-import { checkUpload } from "./uploads";
+import { checkUpload, FILE_CACHE } from "./uploads";
 
 /**
  * Files live in R2 (binding FILES). Any S3-compatible storage works for uploads:
@@ -32,12 +32,14 @@ export type UploadTarget = { url: string; headers: Record<string, string> };
 export async function uploadTarget(key: string, type: string): Promise<UploadTarget> {
   const remote = s3();
   if (!remote) return { url: `/api/uploads/${key}`, headers: { "Content-Type": type } };
+  // Cache-Control is signed too: the file is stored with it, so the CDN caches it for a year.
+  const headers = { "Content-Type": type, "Cache-Control": FILE_CACHE };
   const signed = await remote.client.sign(`${remote.base}/${key}?X-Amz-Expires=600`, {
     method: "PUT",
-    headers: { "Content-Type": type },
+    headers,
     aws: { signQuery: true, allHeaders: true },
   });
-  return { url: signed.url, headers: { "Content-Type": type } };
+  return { url: signed.url, headers };
 }
 
 /** Uploaded? Right type and size? Otherwise it's deleted. */
@@ -53,7 +55,7 @@ export async function verifyUpload(key: string): Promise<{ ok: true } | { ok: fa
 }
 
 export const putFile = (key: string, body: ArrayBuffer, type: string) =>
-  files().put(key, body, { httpMetadata: { contentType: type } });
+  files().put(key, body, { httpMetadata: { contentType: type, cacheControl: FILE_CACHE } });
 
 export const getFile = (key: string) => files().get(key);
 export const deleteFile = (key: string) => files().delete(key);

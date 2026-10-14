@@ -13,7 +13,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "jest",
     "test:e2e": "playwright test",
-    "test:blog": "node --test blog/blog.test.mjs",
+    "test:blog": "node --test blog/blog.test.mjs scripts/cache-stats.test.mjs",
     "blog:build": "node blog/build.mjs",
     "blog:preview": "node blog/build.mjs && wrangler dev -c blog/wrangler.jsonc",
     "bundle:check": "node scripts/check-bundle.mjs",
