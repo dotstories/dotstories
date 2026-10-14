@@ -56,6 +56,11 @@ cloudflare-env.d.ts
 # blog build
 /blog/dist/
 
+# python (runner engine)
+.venv/
+__pycache__/
+.pytest_cache/
+
 # budget guard local state
 /workers/budget-guard/.wrangler/
 /.guard-build/

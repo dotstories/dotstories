@@ -1,0 +1,37 @@
+name: Release runner app
+
+# Push a tag like runner-v0.1.0 → builds the installers → public GitHub Release.
+# Stable download links for the website:
+#   https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Windows.exe
+#   https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Mac.dmg
+on:
+  push:
+    tags: ["runner-v*"]
+
+jobs:
+  build:
+    uses: ./.github/workflows/runner-app.yml
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+      - name: Stable file names
+        run: |
+          mkdir out
+          cp artifacts/DotStories-x86_64-pc-windows-msvc/*.exe out/DotStories-Windows.exe
+          cp artifacts/DotStories-aarch64-apple-darwin/*.dmg out/DotStories-Mac.dmg
+          ls -la out
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "DotStories app ${GITHUB_REF_NAME#runner-v}" \
+            --notes "Install once, then press Run on dotstories.com. First start downloads Python and the AI libraries (a few GB). Unsigned build: Windows may show SmartScreen (More info → Run anyway); on Mac right-click → Open."
