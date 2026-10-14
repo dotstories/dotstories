@@ -28,10 +28,25 @@ def emit(event: dict):
     print(json.dumps(event, ensure_ascii=False), flush=True)
 
 
+_reuse = None
+
+
+def reuse(refresh=False):
+    """Models already on this computer. Scanned once, it takes a moment."""
+    global _reuse
+    if _reuse is None or refresh:
+        from .models import scan
+
+        _reuse = scan()
+    return _reuse
+
+
 def info() -> dict:
     hw = detect()
     t = tier(hw)
-    return {"hardware": hw.to_dict(), "tier": t, "plan": memory_plan(hw), "estimate": estimate(t).to_dict()}
+    r = reuse()
+    return {"hardware": hw.to_dict(), "tier": t, "plan": memory_plan(hw),
+            "estimate": estimate(t, r.saved_gb).to_dict(), "reuse": r.to_dict()}
 
 
 def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
@@ -49,7 +64,7 @@ def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
 
     t0 = time.monotonic()
     emit({"event": "loading", "message": "Loading model (first run downloads it)"})
-    pipe = load_pipeline(plan)
+    pipe = load_pipeline(plan, reuse(), emit)
     emit({"event": "loaded", "seconds": round(time.monotonic() - t0, 1)})
 
     t1 = time.monotonic()
@@ -70,7 +85,7 @@ def model_runner():
         if plan not in cache:
             emit({"event": "loading"})
             cache.clear()
-            cache[plan] = load_pipeline(plan)  # may download: network allowed here
+            cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
         with locked():  # no network, no new processes while the dot runs
             generate(job, cache[plan], make_generator(job.seed), out, emit)
 

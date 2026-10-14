@@ -41,7 +41,9 @@ def human(lo: int, hi: int) -> str:
     return f"~{lo // M}–{hi // M} minutes"
 
 
-def estimate(tier: str) -> Estimate:
+def estimate(tier: str, saved_gb: float = 0) -> Estimate:
+    """saved_gb: models already on this computer (see models.py)."""
     lo, hi = RUN[tier]
     label = human(lo, hi) + (" (no GPU)" if tier.startswith("cpu") else "")
-    return Estimate((lo, hi), label, DOWNLOAD_GB, round(DOWNLOAD_GB / GB_PER_MINUTE), WARNINGS.get(tier))
+    gb = max(DOWNLOAD_GB - saved_gb, 2)  # the AI libraries are always needed once
+    return Estimate((lo, hi), label, gb, round(gb / GB_PER_MINUTE), WARNINGS.get(tier))

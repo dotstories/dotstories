@@ -26,3 +26,8 @@ def test_first_run_download_uses_1gb_per_minute():
 def test_label_is_short_and_human():
     assert estimate("nvidia-16").label == "~5–15 seconds"
     assert estimate("mac-16").label == "~1–6 minutes"
+
+
+def test_models_already_on_disk_shrink_the_download():
+    assert estimate("nvidia-16", saved_gb=26).download_gb == 10
+    assert estimate("nvidia-16", saved_gb=34).download_gb == 2  # libraries are still needed once

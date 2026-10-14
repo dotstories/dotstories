@@ -39,6 +39,17 @@ uv run --extra ml dotstories-engine serve      # http://127.0.0.1:47761
 - Only dotstories.com (and localhost dev) may call it: checked by the `Origin` header. Other websites get `403`.
 - One dot at a time (`409` when busy). Every input field is validated.
 
+## Models you already have
+
+Before downloading, the engine looks for Krea 2 on your computer (read-only, never moved or changed):
+
+| Where | What it reuses | Saves |
+|---|---|---|
+| Hugging Face cache (`~/.cache/huggingface`, `HF_HOME`) | the complete download | ~34 GB |
+| ComfyUI: running instance, Desktop, portable, `extra_model_paths.yaml` | `krea2_turbo_bf16` / `krea2_turbo_fp8_scaled` | ~26 GB |
+
+`info` shows what was found (`reuse.summary`) and a smaller download. If a found file won't load, it downloads instead.
+
 ## Sandbox
 
 On by default for `generate` and `serve` (layer 1; the OS sandbox comes with the Tauri app):
