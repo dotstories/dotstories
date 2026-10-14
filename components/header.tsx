@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { auth, signOut } from "@/auth";
 
-export default function Header() {
+export default async function Header() {
+  const session = await auth();
   return (
     <header className="sticky top-0 z-10 flex h-14 w-full justify-center border-b border-[var(--cds-border-subtle)] bg-[var(--cds-background)]">
       <nav className="container flex items-center justify-between px-4">
@@ -16,6 +18,27 @@ export default function Header() {
           <Link href="/download" className="cds--link">
             Get the app
           </Link>
+          {session ? (
+            <>
+              <span className="text-sm" data-testid="username">
+                {session.user.username}
+              </span>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/" });
+                }}
+              >
+                <button type="submit" className="cds--link text-sm">
+                  Log out
+                </button>
+              </form>
+            </>
+          ) : (
+            <Link href="/login" className="cds--link">
+              Log in
+            </Link>
+          )}
         </div>
       </nav>
     </header>
