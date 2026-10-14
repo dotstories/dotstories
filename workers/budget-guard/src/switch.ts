@@ -143,20 +143,26 @@ export async function stopAll(
 ): Promise<Stop> {
   const stop: Stop = { at: now.toISOString(), reason: why.reason, estimateUsd: why.estimateUsd ?? 0, disabled: [] };
   await store.save({ ...stop, disabled: [] });
+  /** Runs one part of the stop; its name if it turned something off. */
   const step = async (name: string, run: () => Promise<boolean>) => {
     try {
-      if (await run()) stop.disabled.push(name);
+      return (await run()) ? name : null;
     } catch (e) {
       console.error(`Kill switch: couldn't stop ${name}: ${(e as Error).message}`);
+      return null;
     }
   };
-  await step("firewall", () => setFirewall(api, cfg.zone, true));
-  for (const domain of r2Domains(cfg))
-    await step(domain, async () => {
-      const { enabled } = await api<{ enabled: boolean }>(r2Path(accountId, cfg, domain));
-      if (enabled) await api(r2Path(accountId, cfg, domain), { method: "PUT", body: { enabled: false } });
-      return enabled; // only what was on is remembered (r2.dev stays off if it was off)
-    });
+  const done = await Promise.all([
+    step("firewall", () => setFirewall(api, cfg.zone, true)),
+    ...r2Domains(cfg).map((domain) =>
+      step(domain, async () => {
+        const { enabled } = await api<{ enabled: boolean }>(r2Path(accountId, cfg, domain));
+        if (enabled) await api(r2Path(accountId, cfg, domain), { method: "PUT", body: { enabled: false } });
+        return enabled; // only what was on is remembered (r2.dev stays off if it was off)
+      }),
+    ),
+  ]);
+  stop.disabled = done.filter((name): name is string => name !== null);
   await store.save(stop);
   return stop;
 }
@@ -165,8 +171,8 @@ export async function stopAll(
 export async function resumeAll(api: Api, accountId: string, store: Store, cfg: SwitchConfig) {
   const stop = await store.get();
   await setFirewall(api, cfg.zone, false); // always: also clears a rule left on by hand
-  for (const d of stop?.disabled ?? [])
-    if (d !== "firewall") await api(r2Path(accountId, cfg, d), { method: "PUT", body: { enabled: true } });
+  const domains = (stop?.disabled ?? []).filter((d) => d !== "firewall");
+  await Promise.all(domains.map((d) => api(r2Path(accountId, cfg, d), { method: "PUT", body: { enabled: true } })));
   await store.clear();
   return stop;
 }
