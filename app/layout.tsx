@@ -8,6 +8,7 @@ import "./globals.css";
 const plex = IBM_Plex_Sans({ variable: "--font-plex", subsets: ["latin"], weight: ["400", "600"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://dotstories.com"), // absolute URLs for link previews
   title: "DotStories",
   description: "What is possible today with AI. Pick a workflow, press Run, get the result. Free, on your own computer.",
 };
