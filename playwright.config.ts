@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: process.env.BASE_URL
     ? undefined
     : {
-        command: "pnpm preview:worker --port 8787",
+        command: "pnpm db:migrate:local && pnpm preview:worker --port 8787",
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         stdout: "pipe", // worker errors show up in the test output

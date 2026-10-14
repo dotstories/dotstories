@@ -5,9 +5,9 @@ import { OverflowMenu, OverflowMenuItem } from "@carbon/react";
 import { useState } from "react";
 import type { Dot } from "@/lib/dot";
 import type { DotState } from "@/lib/dot-state";
+import type { DotStats } from "@/lib/stats";
 import { setupJson, shareLinks, shareUrl } from "@/lib/share";
 
-export type DotStats = { views: number; likes: number; comments: number };
 
 const n = (x: number) => x.toLocaleString("en-US");
 

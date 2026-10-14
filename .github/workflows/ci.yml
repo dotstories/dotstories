@@ -107,6 +107,7 @@ jobs:
             echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions."
             exit 1
           fi
+          scripts/ci.sh node scripts/cf-resources.mjs # D1 database + migrations
           scripts/ci.sh pnpm exec opennextjs-cloudflare deploy | tee deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"

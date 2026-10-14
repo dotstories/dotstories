@@ -4,7 +4,8 @@ import { Select, SelectItem, TextArea } from "@carbon/react";
 import { type Dot, latest, type MusicDot, RUNNABLE_ENGINES, sortedVersions, version as findVersion } from "@/lib/dot";
 import { type DotState, inputsFor } from "@/lib/dot-state";
 import { useDotState } from "@/lib/use-dot-state";
-import ActionBar, { type DotStats } from "./action-bar";
+import type { DotStats } from "@/lib/stats";
+import ActionBar from "./action-bar";
 import AudioPlayer from "./audio-player";
 import Demo from "./demo";
 

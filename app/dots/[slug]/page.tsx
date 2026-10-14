@@ -1,12 +1,13 @@
 import { Tag } from "@carbon/react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { DotStats } from "@/components/action-bar";
 import DotRunner from "@/components/dot-runner";
+import ViewPing from "@/components/view-ping";
 import { latest } from "@/lib/dot";
 import { parseState, toQuery } from "@/lib/dot-state";
 import { dots, findDot } from "@/lib/dots";
 import { shareUrl, timeAgo } from "@/lib/share";
+import { getStats } from "@/lib/stats";
 
 export const dynamicParams = false; // only known dots; anything else is a 404
 
@@ -45,7 +46,7 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
   const dot = findDot((await params).slug);
   if (!dot) notFound();
   const initial = parseState(dot, await searchParams); // the URL has the visitor's setup
-  const stats: DotStats = { views: 0, likes: 0, comments: 0 }; // from D1 next
+  const stats = await getStats(dot.slug);
   const link = (href: string, text: string) => (
     <a className="cds--link !text-xs" href={href} target="_blank" rel="noreferrer">
       {text}
@@ -54,6 +55,7 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
 
   return (
     <main className="container flex flex-1 flex-col gap-6 px-6 py-12">
+      <ViewPing slug={dot.slug} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <h1 className="text-3xl font-semibold tracking-tight">{dot.name}</h1>
         <div className="flex flex-col items-end gap-1">
