@@ -68,7 +68,7 @@ function Comment({ slug, comment, me, isReply = false }: { slug: string; comment
         )}
         <div className="flex items-center gap-4 text-xs text-[var(--cds-text-secondary)]">
           <time dateTime={comment.createdAt} suppressHydrationWarning>{timeAgo(comment.createdAt)}</time>
-          {me && !isReply && (
+          {me && !isReply && !comment.deleted && (
             <button type="button" className="cds--link text-xs" onClick={() => setReplying(!replying)}>
               Reply
             </button>

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { signUp } from "./session";
+import { signUp, sql } from "./session";
 
 test.skip(!!process.env.BASE_URL, "needs the local database");
 
@@ -53,10 +53,11 @@ test("comment, reply, delete your own; others can't delete it", async ({ browser
   const mine = page.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: text });
   await expect(mine).toBeVisible();
 
+  const reply = `Answering myself ${Date.now()}`;
   await mine.getByRole("button", { name: "Reply" }).click();
-  await page.getByLabel("Reply", { exact: true }).fill("Answering myself");
+  await page.getByLabel("Reply", { exact: true }).fill(reply);
   await mine.getByRole("button", { name: "Reply" }).last().click(); // the form's button, under this comment
-  await expect(page.getByText("Answering myself")).toBeVisible();
+  await expect(page.getByText(reply)).toBeVisible();
 
   // Someone else sees it but has no Delete on it.
   const other = await browser.newPage();
@@ -67,10 +68,36 @@ test("comment, reply, delete your own; others can't delete it", async ({ browser
     other.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: text }).getByRole("button", { name: "Delete" }),
   ).toHaveCount(0);
 
-  // Deleting it removes the replies too.
+  // Deleting it keeps the reply: the comment shows as [deleted], without its author.
   await mine.getByRole("button", { name: "Delete" }).first().click();
   await expect(page.getByText(text)).toHaveCount(0);
-  await expect(page.getByText("Answering myself")).toHaveCount(0);
+  await expect(page.getByText(reply)).toBeVisible();
+  // The thread (list item) now holds a [deleted] comment and the reply under it.
+  const thread = page.getByRole("listitem").filter({ hasText: reply }).filter({ has: page.getByRole("article", { name: "Comment by [deleted]" }) });
+  const gone = thread.getByRole("article", { name: "Comment by [deleted]" });
+  await expect(gone).toContainText("[deleted]");
+  await expect(gone.getByRole("button", { name: "Reply" })).toHaveCount(0); // no replying to a deleted comment
+  expect(sql(`SELECT text FROM comment WHERE text = '${text}'`)).toHaveLength(0); // the text is really gone
+
+  // Last reply deleted → the empty [deleted] placeholder goes too.
+  await page.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: reply }).getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText(reply)).toHaveCount(0);
+  await expect(thread).toHaveCount(0);
+});
+
+test("a comment nobody replied to is removed completely", async ({ page }) => {
+  await signUp(page);
+  await page.goto(DOT);
+  const text = `Short-lived ${Date.now()}`;
+  await page.getByLabel("Add a comment").fill(text);
+  await page.getByRole("button", { name: "Post" }).click();
+  await expect(page.getByText(text)).toBeVisible();
+
+  const before = Number(sql(`SELECT comments FROM dot_stats WHERE slug = '${DOT.split("/").pop()}'`)[0].comments);
+  await page.getByRole("article").filter({ hasText: text }).getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText(text)).toHaveCount(0);
+  await expect.poll(() => sql(`SELECT id FROM comment WHERE text = '${text}'`)).toHaveLength(0); // no row left behind
+  expect(Number(sql(`SELECT comments FROM dot_stats WHERE slug = '${DOT.split("/").pop()}'`)[0].comments)).toBe(before - 1);
 });
 
 test("empty comments are refused", async ({ page }) => {
