@@ -1,7 +1,7 @@
 "use client";
 
 import { PauseFilled, PlayFilledAlt } from "@carbon/icons-react";
-import { type KeyboardEvent, type MouseEvent, useRef, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 
 export const formatTime = (s: number) => {
   const t = Number.isFinite(s) ? Math.max(0, Math.floor(s)) : 0;
@@ -15,6 +15,12 @@ export default function AudioPlayer({ src, title }: { src: string; title: string
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const started = playing || time > 0;
+
+  // The browser may load the metadata before React is ready: read it on mount too.
+  useEffect(() => {
+    const a = ref.current;
+    if (a && a.readyState >= 1 && Number.isFinite(a.duration)) setDuration(a.duration);
+  }, []);
 
   const toggle = () => (playing ? ref.current?.pause() : ref.current?.play());
   const seekTo = (t: number) => {
@@ -42,6 +48,7 @@ export default function AudioPlayer({ src, title }: { src: string; title: string
         onEnded={() => setPlaying(false)}
         onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
       />
       <button type="button" className="audio-player__button" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
         {playing ? <PauseFilled size={20} /> : <PlayFilledAlt size={20} />}

@@ -61,4 +61,19 @@ describe("AudioPlayer", () => {
     fireEvent.keyDown(screen.getByRole("slider", { name: "Seek" }), { key: "ArrowRight" });
     expect(audio().currentTime).toBe(5);
   });
+
+  it("knows the length even if the browser loaded it before React started", () => {
+    const proto = window.HTMLMediaElement.prototype;
+    const ready = Object.getOwnPropertyDescriptor(proto, "readyState");
+    const length = Object.getOwnPropertyDescriptor(proto, "duration");
+    Object.defineProperty(proto, "readyState", { get: () => 1, configurable: true });
+    Object.defineProperty(proto, "duration", { get: () => 30, configurable: true });
+    try {
+      render(<AudioPlayer src="/a.flac" title="t" />);
+      expect(screen.getByRole("slider", { name: "Seek" })).toHaveAttribute("aria-valuemax", "30");
+    } finally {
+      if (ready) Object.defineProperty(proto, "readyState", ready);
+      if (length) Object.defineProperty(proto, "duration", length);
+    }
+  });
 });
