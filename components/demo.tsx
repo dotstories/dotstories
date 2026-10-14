@@ -86,7 +86,10 @@ function Status() {
   if (runner.state === "missing")
     return (
       <span className="text-sm text-[var(--cds-text-secondary)]">
-        Get the free DotStories app to run this on your computer — coming soon.
+        <a className="cds--link" href="/download">
+          Get the free DotStories app
+        </a>{" "}
+        to run this on your computer.
       </span>
     );
 

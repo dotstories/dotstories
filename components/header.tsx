@@ -9,9 +9,14 @@ export default function Header() {
           <Image src="/logo.png" alt="" width={28} height={28} priority />
           <span className="hidden font-semibold sm:block">DotStories</span>
         </Link>
-        <Link href="/dots" className="cds--link">
-          Dots
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/dots" className="cds--link">
+            Dots
+          </Link>
+          <Link href="/download" className="cds--link">
+            Get the app
+          </Link>
+        </div>
       </nav>
     </header>
   );
