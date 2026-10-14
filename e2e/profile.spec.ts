@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signUp } from "./session";
+import { signUp, sql } from "./session";
 
 test.skip(!!process.env.BASE_URL, "needs the local database");
 
@@ -61,4 +61,25 @@ test("uploads: login required, size limits, only your own folder", async ({ page
     data: Buffer.from("x"),
   });
   expect(other.status()).toBe(403);
+});
+
+test("delete your account: needs your username, then everything is gone and you're logged out", async ({ page }) => {
+  const { email, username } = await signUp(page);
+  await page.goto("/dots/dark-fantasy-thumbnail");
+  await page.getByLabel("Add a comment").fill("Bye for now");
+  await page.getByRole("button", { name: "Post" }).click();
+  await expect(page.getByText("Bye for now")).toBeVisible();
+
+  await page.goto("/profile");
+  await page.getByLabel(`Type ${username} to confirm`).fill("not-me");
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Type your username exactly" })).toBeVisible();
+  expect(sql(`SELECT id FROM user WHERE email = '${email}'`)).toHaveLength(1);
+
+  await page.getByLabel(`Type ${username} to confirm`).fill(username);
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page).toHaveURL(/\/\?account=deleted$/);
+  await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect.poll(() => sql(`SELECT id FROM user WHERE email = '${email}'`)).toHaveLength(0);
+  expect(sql(`SELECT id FROM comment WHERE text = 'Bye for now'`)).toHaveLength(0);
 });

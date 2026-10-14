@@ -59,3 +59,15 @@ export const putFile = (key: string, body: ArrayBuffer, type: string) =>
 
 export const getFile = (key: string) => files().get(key);
 export const deleteFile = (key: string) => files().delete(key);
+
+/** Delete every file under a prefix (e.g. a user's folder). R2 lists and deletes up to 1000 at a time. */
+export async function deleteFolder(prefix: string) {
+  const bucket = (getCloudflareContext().env as Partial<CloudflareEnv>).FILES;
+  if (!bucket) return; // R2 not on: nothing was ever uploaded
+  let cursor: string | undefined;
+  do {
+    const page = await bucket.list({ prefix, cursor, limit: 1000 });
+    if (page.objects.length) await bucket.delete(page.objects.map((o) => o.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+}
