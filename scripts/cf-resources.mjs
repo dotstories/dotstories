@@ -3,7 +3,10 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const wrangler = (...args) => execFileSync("pnpm", ["exec", "wrangler", ...args], { encoding: "utf8" });
+// wrangler straight from node_modules: `pnpm exec` may print its own lines ("Already up to date") into the output.
+const wrangler = (...args) => execFileSync("node_modules/.bin/wrangler", args, { encoding: "utf8" });
+/** JSON from wrangler output, ignoring any lines printed before it. */
+const json = (out) => JSON.parse(out.slice(out.search(/^[[{]/m)));
 const fail = (msg, e) => {
   console.error(`::error::${msg}${e ? ` (${String(e.stderr || e.message).split("\n")[0]})` : ""}`);
   process.exit(1);
@@ -14,16 +17,17 @@ const d1 = config.d1_databases[0];
 
 let databases;
 try {
-  databases = JSON.parse(wrangler("d1", "list", "--json"));
+  databases = json(wrangler("d1", "list", "--json"));
 } catch (e) {
-  fail("Can't list D1 databases: add 'D1 Edit' to the CLOUDFLARE_API_TOKEN permissions.", e);
+  const denied = /auth|permission|10000|403/i.test(String(e.stderr || e.message));
+  fail(denied ? "Can't list D1 databases: add 'D1 Edit' to the CLOUDFLARE_API_TOKEN permissions." : "Can't list D1 databases.", e);
 }
 
 let db = databases.find((x) => x.name === d1.database_name);
 if (!db) {
   console.log(`Creating D1 database "${d1.database_name}"…`);
   wrangler("d1", "create", d1.database_name);
-  db = JSON.parse(wrangler("d1", "list", "--json")).find((x) => x.name === d1.database_name);
+  db = json(wrangler("d1", "list", "--json")).find((x) => x.name === d1.database_name);
 }
 d1.database_id = db.uuid;
 writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
@@ -124,7 +128,7 @@ const COPIED = [
 ];
 let existing = [];
 try {
-  existing = JSON.parse(wrangler("secret", "list", "--format", "json")).map((s) => s.name);
+  existing = json(wrangler("secret", "list", "--format", "json")).map((s) => s.name);
 } catch {
   // first deploy: the Worker doesn't exist yet
 }
