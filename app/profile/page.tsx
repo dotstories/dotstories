@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "Profile · DotStories" };
 
 export default async function ProfilePage() {
   const session = await auth();
-  if (!session) redirect("/login?next=/profile");
+  if (!session) redirect("/login?next=%2Fprofile");
   const user = await getUserById(session.user.id);
-  if (!user) redirect("/login?next=/profile");
+  if (!user) redirect("/login?next=%2Fprofile");
 
   return (
     <main className="container flex flex-1 flex-col gap-8 px-6 py-12">

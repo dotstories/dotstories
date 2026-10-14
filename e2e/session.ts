@@ -21,7 +21,7 @@ export async function signUp(page: Page) {
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
   const code = sql(`SELECT code FROM email_code WHERE email = '${email}'`)[0].code;
-  await page.getByLabel("Code").fill(code);
+  await page.getByLabel("Code", { exact: true }).fill(code);
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByTestId("username")).toBeVisible();
   return { email, username: (await page.getByTestId("username").textContent())! };

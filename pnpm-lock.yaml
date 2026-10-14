@@ -20,6 +20,9 @@ importers:
       '@opennextjs/cloudflare':
         specifier: ^1.20.11
         version: 1.20.11(next@16.4.0(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.64.0)(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(sass@1.105.1))(supports-color@10.2.2)(wrangler@4.149.0(@cloudflare/workers-types@5.20261014.1)(@types/node@20.19.43))
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@cloudflare/workers-types@5.20261014.1)(@opentelemetry/api@1.9.1)
