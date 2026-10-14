@@ -1,34 +1,50 @@
 "use client";
 
 import { Select, SelectItem, TextArea } from "@carbon/react";
-import { useState } from "react";
 import { type Dot, latest, type MusicDot, RUNNABLE_ENGINES, sortedVersions, version as findVersion } from "@/lib/dot";
+import { type DotState, inputsFor } from "@/lib/dot-state";
+import { useDotState } from "@/lib/use-dot-state";
 import AudioPlayer from "./audio-player";
 import Demo from "./demo";
 
-/** Dot page: pick a version (latest by default), then run it. */
-export default function DotRunner({ dot }: { dot: Dot }) {
+/** Pick a version (latest by default), change inputs, run. Everything is kept in the URL. */
+export default function DotRunner({
+  dot,
+  initial = {},
+  showVersions = true,
+}: {
+  dot: Dot;
+  initial?: DotState;
+  showVersions?: boolean;
+}) {
+  const [state, update] = useDotState(dot, initial);
   const newest = latest(dot).version;
-  const [selected, setSelected] = useState(newest);
-  const v = findVersion(dot, selected) ?? latest(dot);
+  const v = (state.v && findVersion(dot, state.v)) || latest(dot);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 md:max-w-xs">
-        <Select id="version" labelText="Version" value={selected} onChange={(e) => setSelected(e.target.value)}>
-          {sortedVersions(dot).map((x) => (
-            <SelectItem key={x.version} value={x.version} text={x.version === newest ? `${x.version} (latest)` : x.version} />
-          ))}
-        </Select>
-        <p className="text-sm text-[var(--cds-text-secondary)]">
-          {v.date} · <span>{v.changelog}</span>
-        </p>
-      </div>
-      {/* key: a new version starts with its own prompt */}
+      {showVersions && (
+        <div className="flex flex-col gap-2 md:max-w-xs">
+          <Select
+            id="version"
+            labelText="Version"
+            value={v.version}
+            // A new version starts from its own prompt and seed.
+            onChange={(e) => update({ v: e.target.value, prompt: undefined, seed: undefined })}
+          >
+            {sortedVersions(dot).map((x) => (
+              <SelectItem key={x.version} value={x.version} text={x.version === newest ? `${x.version} (latest)` : x.version} />
+            ))}
+          </Select>
+          <p className="text-sm text-[var(--cds-text-secondary)]">
+            {v.date} · <span>{v.changelog}</span>
+          </p>
+        </div>
+      )}
       {dot.kind === "image" ? (
-        <Demo key={selected} dot={dot} version={selected} />
+        <Demo dot={dot} version={v.version} inputs={inputsFor(dot, state)} onChange={update} />
       ) : (
-        <MusicPreview key={selected} dot={dot} version={selected} />
+        <MusicPreview dot={dot} version={v.version} />
       )}
     </div>
   );

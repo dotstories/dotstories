@@ -1,15 +1,18 @@
 "use client";
 
 import { PlayFilledAlt } from "@carbon/icons-react";
-import { Button, InlineLoading, InlineNotification, ProgressBar, TextArea } from "@carbon/react";
+import { Button, InlineLoading, InlineNotification, NumberInput, ProgressBar, TextArea } from "@carbon/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { type ImageDot, latest, version as findVersion } from "@/lib/dot";
+import { useEffect } from "react";
+import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
+import type { DotState } from "@/lib/dot-state";
 import { isRunning, useRunStore } from "@/store/run";
 
-export default function Demo({ dot, version }: { dot: ImageDot; version?: string }) {
-  const v = (version && findVersion(dot, version)) || latest(dot);
-  const [prompt, setPrompt] = useState(v.inputs.prompt);
+type Props = { dot: ImageDot; version: string; inputs: Inputs; onChange: (patch: DotState) => void };
+
+export default function Demo({ dot, version, inputs, onChange }: Props) {
+  const v = findVersion(dot, version) ?? latest(dot);
+  const { prompt, seed } = inputs;
   const { runner, job, image, error, shading, checkRunner, run } = useRunStore();
   const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
@@ -25,16 +28,30 @@ export default function Demo({ dot, version }: { dot: ImageDot; version?: string
           id="prompt"
           labelText={`Prompt · ${dot.name}`}
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => onChange({ prompt: e.target.value })}
           rows={4}
           maxCount={4000}
           enableCounter
         />
-        <div className="flex items-center gap-4">
+        <div className="flex items-end gap-4">
+          <NumberInput
+            id="seed"
+            label="Seed"
+            className="!w-40 shrink-0"
+            min={0}
+            max={2 ** 32 - 1}
+            value={seed}
+            allowEmpty={false}
+            hideSteppers
+            onChange={(_, { value }) => {
+              const n = Number(value);
+              if (Number.isInteger(n) && n >= 0 && n <= 2 ** 32 - 1) onChange({ seed: n });
+            }}
+          />
           <Button
             renderIcon={PlayFilledAlt}
             disabled={runner.state !== "ready" || running || !prompt.trim()}
-            onClick={() => run({ ...v.inputs, prompt }, v.postSteps)}
+            onClick={() => run(inputs, v.postSteps)}
           >
             Run
           </Button>

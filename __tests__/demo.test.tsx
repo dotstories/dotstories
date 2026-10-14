@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import Demo from "../components/demo";
+import { latest } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
 import { useRunStore } from "../store/run";
 
@@ -18,7 +19,8 @@ const INFO = {
 
 const show = (state: object) => {
   useRunStore.setState({ job: null, image: null, error: null, shading: false, checkRunner: async () => {}, ...state });
-  render(<Demo dot={darkFantasy} />);
+  const v = latest(darkFantasy);
+  render(<Demo dot={darkFantasy} version={v.version} inputs={v.inputs} onChange={() => {}} />);
 };
 
 describe("Demo", () => {

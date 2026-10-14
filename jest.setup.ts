@@ -19,3 +19,11 @@ window.matchMedia ??= (query: string) =>
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }) as MediaQueryList;
+
+// App Router hooks outside a Next app: a fake router the tests can inspect.
+export const mockRouter = { replace: jest.fn(), push: jest.fn(), refresh: jest.fn() };
+jest.mock("next/navigation", () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));

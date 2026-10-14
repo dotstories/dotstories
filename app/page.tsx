@@ -1,15 +1,18 @@
 import Link from "next/link";
-import Demo from "@/components/demo";
+import DotRunner from "@/components/dot-runner";
+import { parseState, toQuery } from "@/lib/dot-state";
 import { darkFantasy } from "@/lib/dots/dark-fantasy";
 
-export default function Home() {
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const initial = parseState(darkFantasy, await searchParams);
   return (
     <main className="container flex flex-1 flex-col gap-10 px-6 py-12">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">DotStories</h1>
         <p className="text-[var(--cds-text-secondary)]">What is possible today with AI.</p>
       </div>
-      <Demo dot={darkFantasy} />
+      {/* key: a new link (back/forward, restored setup) starts fresh */}
+      <DotRunner key={toQuery(darkFantasy, initial)} dot={darkFantasy} initial={initial} showVersions={false} />
       <Link href="/dots" className="cds--link self-start">
         Browse all dots →
       </Link>

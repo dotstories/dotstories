@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import DotRunner from "@/components/dot-runner";
+import { parseState, toQuery } from "@/lib/dot-state";
 import { dots, findDot } from "@/lib/dots";
 
 export const dynamicParams = false; // only known dots; anything else is a 404
@@ -14,9 +15,10 @@ export async function generateMetadata({ params }: PageProps<"/dots/[slug]">): P
   return { title: dot ? `${dot.name} · DotStories` : "DotStories", description: dot?.description };
 }
 
-export default async function DotPage({ params }: PageProps<"/dots/[slug]">) {
+export default async function DotPage({ params, searchParams }: PageProps<"/dots/[slug]">) {
   const dot = findDot((await params).slug);
   if (!dot) notFound();
+  const initial = parseState(dot, await searchParams); // the URL has the visitor's setup
 
   return (
     <main className="container flex flex-1 flex-col gap-8 px-6 py-12">
@@ -38,7 +40,7 @@ export default async function DotPage({ params }: PageProps<"/dots/[slug]">) {
           )}
         </p>
       </div>
-      <DotRunner dot={dot} />
+      <DotRunner key={toQuery(dot, initial)} dot={dot} initial={initial} />
     </main>
   );
 }
