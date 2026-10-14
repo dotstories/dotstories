@@ -1,6 +1,7 @@
 import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { AwsClient } from "aws4fetch";
+import { budgetStopped } from "./budget";
 import { checkUpload } from "./uploads";
 
 /**
@@ -9,6 +10,9 @@ import { checkUpload } from "./uploads";
  * Without those keys (local, CI), files are uploaded through the Worker instead.
  */
 const files = () => getCloudflareContext().env.FILES;
+
+/** The budget guard stopped spending this month: no uploads, no file reads (R2 costs). */
+export const spendingStopped = () => budgetStopped(getCloudflareContext().env.DB);
 
 function s3() {
   const { S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY } = process.env;

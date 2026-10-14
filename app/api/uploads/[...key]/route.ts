@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
-import { putFile } from "@/lib/storage";
+import { pausedResponse } from "@/lib/budget";
+import { putFile, spendingStopped } from "@/lib/storage";
 import { checkUpload, ownsKey } from "@/lib/uploads";
 
 /** Upload through the Worker, when no S3 keys are set (local, CI). Only into your own folder. */
 export async function PUT(req: Request, { params }: RouteContext<"/api/uploads/[...key]">) {
+  if (await spendingStopped()) return pausedResponse();
   const session = await auth();
   const key = (await params).key.join("/");
   if (!session || !ownsKey(session.user.id, key)) return new Response(null, { status: 403 });

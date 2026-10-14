@@ -55,3 +55,7 @@ cloudflare-env.d.ts
 
 # blog build
 /blog/dist/
+
+# budget guard local state
+/workers/budget-guard/.wrangler/
+/.guard-build/

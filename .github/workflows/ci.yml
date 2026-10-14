@@ -64,6 +64,7 @@ jobs:
       - run: scripts/ci.sh pnpm test:blog
       - run: scripts/ci.sh pnpm build:worker # next build + Cloudflare worker
       - run: scripts/ci.sh pnpm bundle:check
+      - run: scripts/ci.sh pnpm exec wrangler deploy --dry-run -c workers/budget-guard/wrangler.jsonc --outdir .guard-build # the guard bundles
 
       - run: scripts/ci.sh pnpm exec playwright install --with-deps chromium
       - run: scripts/ci.sh pnpm test:e2e # runs on the real Cloudflare runtime
@@ -113,6 +114,7 @@ jobs:
           AUTH_TWITTER_SECRET: ${{ secrets.AUTH_TWITTER_SECRET }}
           S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          BUDGET_GUARD_API_TOKEN: ${{ secrets.BUDGET_GUARD_API_TOKEN }} # Account Analytics Read + Workers R2 Storage Edit
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions."
@@ -126,6 +128,13 @@ jobs:
           # blog.dotstories.com: static, its own Worker
           scripts/ci.sh pnpm blog:build
           scripts/ci.sh pnpm exec wrangler deploy -c blog/wrangler.jsonc
+          # Budget guard: hourly cron that stops R2 spending over the budget (README: "Budget stop & reset")
+          scripts/ci.sh pnpm exec wrangler deploy -c workers/budget-guard/wrangler.jsonc
+          if [ -n "$BUDGET_GUARD_API_TOKEN" ]; then
+            printf '%s' "$BUDGET_GUARD_API_TOKEN" | pnpm exec wrangler secret put CF_API_TOKEN -c workers/budget-guard/wrangler.jsonc >/dev/null
+          else
+            echo "::warning title=Budget guard::Add the BUDGET_GUARD_API_TOKEN secret, or the guard can't read your usage (README: Budget stop & reset)."
+          fi
 
       - name: Smoke test live site
         env:

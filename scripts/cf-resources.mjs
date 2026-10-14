@@ -31,6 +31,13 @@ console.log(`D1 ${d1.database_name} → ${db.uuid}`);
 
 console.log(wrangler("d1", "migrations", "apply", d1.binding, "--remote"));
 
+// Budget guard Worker: same D1 database (the stop flag), this account.
+const GUARD = "workers/budget-guard/wrangler.jsonc";
+const guard = JSON.parse(readFileSync(GUARD, "utf8"));
+guard.d1_databases[0].database_id = db.uuid;
+guard.vars.ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+writeFileSync(GUARD, JSON.stringify(guard, null, 2));
+
 // R2 bucket for uploads (needs "R2 Edit" on the token) + CORS so browsers can upload to it directly.
 const bucket = config.r2_buckets[0].bucket_name;
 try {
