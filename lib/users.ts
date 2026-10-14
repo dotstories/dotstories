@@ -2,6 +2,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { users } from "@/db/schema";
 import { getDb } from "./db";
+import { isRetired } from "./retired";
 import { suggestUsername } from "./username";
 
 export const getUserByEmail = (email: string) =>
@@ -9,13 +10,13 @@ export const getUserByEmail = (email: string) =>
 
 export const getUserById = (id: string) => getDb().select().from(users).where(eq(users.id, id)).get();
 
+/** In use, or used by an account that was deleted (those stay reserved for good). */
 export const usernameTaken = async (username: string, exceptUserId?: string) => {
-  const row = await getDb()
-    .select({ id: users.id })
-    .from(users)
-    .where(sql`${users.username} = ${username} COLLATE NOCASE`)
-    .get();
-  return !!row && row.id !== exceptUserId;
+  const [row, retired] = await Promise.all([
+    getDb().select({ id: users.id }).from(users).where(sql`${users.username} = ${username} COLLATE NOCASE`).get(),
+    isRetired("username", username),
+  ]);
+  return retired || (!!row && row.id !== exceptUserId);
 };
 
 /** A free username based on an email or name: "nestor", else "nestor4821". */

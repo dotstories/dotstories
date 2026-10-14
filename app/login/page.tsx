@@ -10,7 +10,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const to = safeRedirect(typeof next === "string" ? next : null);
   return (
     <AuthCard title="Log in">
-      {error && <p role="alert" className="text-sm text-[var(--cds-text-error)]">That didn&apos;t work. Please try again.</p>}
+      {error && (
+        <p role="alert" className="text-sm text-[var(--cds-text-error)]">
+          {error === "AccessDenied" ? "This account was deleted and can't be used again." : "That didn't work. Please try again."}
+        </p>
+      )}
       <CredentialsForm mode="login" next={to} />
       <SocialButtons next={to} />
     </AuthCard>

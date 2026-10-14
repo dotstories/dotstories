@@ -121,3 +121,11 @@ export const dotState = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.slug] })],
 );
+
+/** Emails, usernames and social logins of deleted accounts, as hashes only (lib/retired-hash.ts). */
+export const retired = sqliteTable("retired", {
+  hash: text("hash").primaryKey(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

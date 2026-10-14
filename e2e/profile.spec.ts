@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { signUp, sql } from "./session";
 
@@ -103,10 +104,26 @@ test("delete your account: personal data removed, comment threads kept, logged o
   await expect(other.getByText(reply)).toBeVisible();
   await expect(other.getByRole("article", { name: "Comment by Deleted user" }).first()).toContainText("[deleted]");
 
-  // The email can't log in any more, and can sign up again.
+  // The email can't log in any more, and can't sign up again.
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("Good1pass");
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Wrong email or password." })).toBeVisible();
+
+  await page.goto("/register");
+  await page.getByLabel("Email").fill(email.toUpperCase());
+  await page.getByLabel("Password", { exact: true }).fill("Good1pass");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "belonged to a deleted account" })).toBeVisible();
+
+  // Nobody else can take the username.
+  await other.goto("/profile");
+  await other.getByLabel("Username").fill(username);
+  await other.getByRole("button", { name: "Save" }).click();
+  await expect(other.getByRole("alert").filter({ hasText: "That username is taken." })).toBeVisible();
+
+  // Kept only as hashes.
+  const hash = (kind: string, value: string) => createHash("sha256").update(`dotstories:${kind}:${value.toLowerCase()}`).digest("hex");
+  expect(sql(`SELECT hash FROM retired WHERE hash IN ('${hash("email", email)}', '${hash("username", username)}')`)).toHaveLength(2);
 });

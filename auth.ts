@@ -9,6 +9,7 @@ import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { LoginSchema } from "@/lib/auth-schemas";
 import { getDb } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { isRetired } from "@/lib/retired";
 import { getUserByEmail, getUserById, uniqueUsername } from "@/lib/users";
 
 const RECHECK_MS = 5 * 60_000; // how often a session checks that its account still exists
@@ -55,6 +56,15 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth(() 
     }),
   ],
   callbacks: {
+    // Deleted accounts stay deleted: their social login and email can't sign up again (→ /login?error=AccessDenied).
+    async signIn({ user, account }) {
+      if (account?.type !== "oauth" && account?.type !== "oidc") return true;
+      const [login, email] = await Promise.all([
+        isRetired("login", `${account.provider}:${account.providerAccountId}`),
+        user.email ? isRetired("email", user.email) : false,
+      ]);
+      return !login && !email;
+    },
     async jwt({ token, user, trigger }) {
       if (user) token.username = user.username;
       const stale = Date.now() - ((token.checkedAt as number | undefined) ?? 0) > RECHECK_MS;
