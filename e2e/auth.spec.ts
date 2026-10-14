@@ -25,7 +25,7 @@ async function register(page: Page, email: string, password = PASSWORD) {
 const codeFor = (email: string) => sql(`SELECT code FROM email_code WHERE email = '${email}'`)[0]?.code;
 
 async function verify(page: Page, code: string) {
-  await page.getByLabel("Code").fill(code);
+  await page.getByLabel("Code", { exact: true }).fill(code);
   await page.getByRole("button", { name: "Verify" }).click();
 }
 
