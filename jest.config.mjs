@@ -10,6 +10,8 @@ export default async function config() {
     testEnvironment: "jsdom",
     setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
     testPathIgnorePatterns: ["<rootDir>/e2e/", "<rootDir>/.open-next/"],
+    // SWC rewrites "@/" in imports, not in jest.mock("@/..."): map it for Jest too.
+    moduleNameMapper: { "^@/(.*)$": "<rootDir>/$1" },
   })();
   return {
     ...base,
