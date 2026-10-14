@@ -2,6 +2,7 @@
 
 import { PlayFilledAlt } from "@carbon/icons-react";
 import { Button, InlineLoading, InlineNotification, ProgressBar, TextArea } from "@carbon/react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type ImageDot, latest, version as findVersion } from "@/lib/dot";
 import { isRunning, useRunStore } from "@/store/run";
