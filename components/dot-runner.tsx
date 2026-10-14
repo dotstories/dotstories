@@ -15,11 +15,15 @@ export default function DotRunner({
   initial = {},
   showVersions = true,
   stats,
+  liked,
+  loggedIn,
 }: {
   dot: Dot;
   initial?: DotState;
   showVersions?: boolean;
   stats?: DotStats; // set: show comments, share, likes and views
+  liked?: boolean;
+  loggedIn?: boolean;
 }) {
   const [state, update] = useDotState(dot, initial);
   const newest = latest(dot).version;
@@ -27,7 +31,7 @@ export default function DotRunner({
 
   return (
     <div className="flex flex-col gap-6">
-      {stats && <ActionBar dot={dot} state={state} stats={stats} />}
+      {stats && <ActionBar dot={dot} state={state} stats={stats} liked={liked} loggedIn={loggedIn} />}
       {showVersions && (
         <div className="flex flex-col gap-2 md:max-w-xs">
           <Select

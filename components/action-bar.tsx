@@ -1,18 +1,21 @@
 "use client";
 
-import { Favorite, Forum, Share, ViewFilled } from "@carbon/icons-react";
+import { Forum, Share, ViewFilled } from "@carbon/icons-react";
 import { OverflowMenu, OverflowMenuItem } from "@carbon/react";
 import { useState } from "react";
 import type { Dot } from "@/lib/dot";
 import type { DotState } from "@/lib/dot-state";
 import type { DotStats } from "@/lib/stats";
 import { setupJson, shareLinks, shareUrl } from "@/lib/share";
+import LikeButton from "./like-button";
 
 
 const n = (x: number) => x.toLocaleString("en-US");
 
 /** Comments · Share · Likes ........ Views, like the old DotStories dot card. */
-export default function ActionBar({ dot, state, stats }: { dot: Dot; state: DotState; stats: DotStats }) {
+type Props = { dot: Dot; state: DotState; stats: DotStats; liked?: boolean; loggedIn?: boolean };
+
+export default function ActionBar({ dot, state, stats, liked = false, loggedIn = false }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const url = shareUrl(dot, state);
   const links = shareLinks(dot, url);
@@ -37,10 +40,7 @@ export default function ActionBar({ dot, state, stats }: { dot: Dot; state: DotS
         <OverflowMenuItem itemText="Share on Reddit" onClick={() => open(links.reddit)} />
       </OverflowMenu>
 
-      <span className="flex items-center gap-1 px-3 text-sm" title="Likes">
-        <Favorite size={20} aria-label="Likes" />
-        <span>{n(stats.likes)}</span>
-      </span>
+      <LikeButton slug={dot.slug} initial={{ liked, likes: stats.likes }} loggedIn={loggedIn} />
 
       <span role="status" className="text-sm text-[var(--cds-support-success)]">
         {copied}

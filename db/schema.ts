@@ -75,3 +75,32 @@ export const passwordResets = sqliteTable("password_reset", {
   email: text("email").notNull(),
   expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const dotLikes = sqliteTable(
+  "dot_like",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.slug] })],
+);
+
+export const comments = sqliteTable("comment", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  parentId: text("parentId"),
+  text: text("text").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
