@@ -2,7 +2,7 @@
 
 import { Download } from "@carbon/icons-react";
 import { Button, InlineLoading } from "@carbon/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { detectOS, DOWNLOADS, type OS, RELEASE_API } from "@/lib/download";
 
 const STEPS: Record<"windows" | "mac", string[]> = {
@@ -20,16 +20,19 @@ const STEPS: Record<"windows" | "mac", string[]> = {
   ],
 };
 
+const noSubscribe = () => () => {};
+
 export default function DownloadApp({ os: given }: { os?: OS }) {
-  const [os, setOs] = useState<OS | null>(given ?? null);
+  // The browser's OS: null while rendering on the server, so no hydration mismatch.
+  const detected = useSyncExternalStore(noSubscribe, () => detectOS(navigator.userAgent), () => null);
+  const os = given ?? detected;
   const [release, setRelease] = useState<"checking" | "ready" | "missing">("checking");
 
   useEffect(() => {
-    if (!given) setOs(detectOS(navigator.userAgent));
     fetch(RELEASE_API)
       .then((r) => setRelease(r.ok ? "ready" : "missing"))
       .catch(() => setRelease("ready")); // GitHub unreachable or rate-limited: offer the links anyway
-  }, [given]);
+  }, []);
 
   if (!os || release === "checking") return <InlineLoading description="Checking the latest version…" />;
 
