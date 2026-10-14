@@ -47,6 +47,7 @@ jobs:
           fi
 
       - run: scripts/ci.sh pnpm lint
+      - run: TAIL=120 scripts/ci.sh pnpm doctor # React audit: correctness, performance, security, a11y
       - run: scripts/ci.sh pnpm typecheck
       - run: scripts/ci.sh pnpm test
       - run: scripts/ci.sh pnpm build:worker # next build + Cloudflare worker

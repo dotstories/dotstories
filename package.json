@@ -16,7 +16,8 @@
     "bundle:check": "node scripts/check-bundle.mjs",
     "preview": "node scripts/patch-opennext.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "node scripts/patch-opennext.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "doctor": "react-doctor . --fail-on error --offline --verbose --yes --no-ami"
   },
   "dependencies": {
     "@carbon/icons-react": "^11.80.0",
@@ -43,6 +44,7 @@
     "eslint-config-next": "16.4.0",
     "jest": "^30",
     "jest-environment-jsdom": "^30",
+    "react-doctor": "0.9.18",
     "sass": "^1.90.0",
     "tailwindcss": "^4",
     "typescript": "^5",

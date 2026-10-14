@@ -10,6 +10,7 @@ See [PLAN.md](PLAN.md) for the plan.
 pnpm install
 pnpm dev          # http://localhost:3000
 pnpm test         # unit tests (Jest + React Testing Library)
+pnpm doctor       # react-doctor audit (runs in CI)
 pnpm test:e2e     # e2e on the Cloudflare runtime (needs `pnpm build:worker` first)
 pnpm preview      # run in the Cloudflare Workers runtime locally
 ```
