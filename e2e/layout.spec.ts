@@ -33,3 +33,21 @@ test("Tailwind layout classes win over Carbon's reset; Carbon components keep th
   expect(styles.linkColor).toBe("rgb(120, 169, 255)"); // Carbon g100 link color, not the reset's inherit
   expect(styles.buttonPadding).toBeGreaterThan(20);
 });
+
+test("footer: legal pages open and show who runs DotStories", async ({ page }) => {
+  for (const [link, title] of [
+    ["Terms", "Terms of Service"],
+    ["Privacy", "Privacy Policy"],
+    ["Cookies", "Cookie Policy"],
+  ]) {
+    await page.goto("/");
+    await page.getByRole("contentinfo").getByRole("link", { name: link, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  }
+});
+
+test("sign up says 16+ and links the terms", async ({ page }) => {
+  await page.goto("/register");
+  await expect(page.getByText(/16 or older/)).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+});
