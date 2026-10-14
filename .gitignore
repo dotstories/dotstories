@@ -50,3 +50,8 @@ cloudflare-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+
+# python (runner engine)
+.venv/
+__pycache__/
+.pytest_cache/

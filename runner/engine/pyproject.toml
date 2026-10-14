@@ -1,0 +1,45 @@
+[project]
+name = "dotstories-engine"
+version = "0.1.0"
+description = "Runs DotStories dots on your own computer"
+license = "AGPL-3.0-only"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=10",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+# The heavy part: only installed on users' machines, never in CI.
+ml = [
+    "torch>=2.9",
+    "diffusers>=0.40",          # first release with Krea2Pipeline
+    "transformers>=4.57.1",     # Qwen3-VL text encoder
+    "accelerate>=1.0",
+    "safetensors>=0.4",
+]
+
+[project.scripts]
+dotstories-engine = "dotstories_engine.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dotstories_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# NVIDIA: CUDA 12.8 wheels (RTX 20xx–50xx). Mac: PyPI wheels include the Apple GPU.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" }]
