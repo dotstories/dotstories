@@ -1,11 +1,12 @@
 // blog.dotstories.com: static files only, its own tiny Worker (no code runs).
-// Custom domain: Cloudflare → Workers → dotstories-blog → Settings → Domains → add blog.dotstories.com
+// The custom domain is attached on deploy (needs "Workers Routes Edit" on dotstories.com for the deploy token).
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "dotstories-blog",
   "compatibility_date": "2026-10-01",
   "workers_dev": false, // only through blog.dotstories.com, behind the firewall and the kill switch
   "preview_urls": false,
+  "routes": [{ "pattern": "blog.dotstories.com", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "html_handling": "drop-trailing-slash", // /what-is-a-dot.html is served at /what-is-a-dot

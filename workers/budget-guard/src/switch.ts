@@ -2,14 +2,15 @@
 // Used by the budget guard (automatic) and by scripts/kill-switch.mts (the "Kill switch" GitHub button).
 //
 // Stop = 1. a row in D1 (the app answers 503 on uploads and files)
-//        2. a Cloudflare firewall rule that blocks every *.dotstories.com host at the edge (no Worker, no R2 cost)
-//        3. the R2 bucket's public domains that were on → off
-// Resume undoes exactly what the stop did.
+//        2. a Cloudflare firewall rule that blocks every *.dotstories.com host at the edge: site, blog and the
+//           files domain (an R2 custom domain is in the zone too). No Worker, no R2 cost while stopped.
+// r2.dev stays off (the deploy turns it off every time), so the token needs no R2 access at all.
+// Resume undoes the stop.
 import type { D1Database } from "@cloudflare/workers-types";
 
 export type Stop = { at: string; reason: "budget" | "manual"; estimateUsd: number; disabled: string[] };
 export type Store = { get(): Promise<Stop | null>; save(stop: Stop): Promise<void>; clear(): Promise<void> };
-export type SwitchConfig = { zone: string; bucket: string; r2Domain: string };
+export type SwitchConfig = { zone: string };
 
 /** Cloudflare API: returns `result`, throws with the status on failure. */
 export type Api = <T = unknown>(path: string, init?: { method?: string; body?: unknown }) => Promise<T>;
@@ -121,21 +122,11 @@ export async function firewallOn(api: Api, zone: string): Promise<boolean> {
   return !!ep?.rules?.find((r) => r.ref === RULE_REF)?.enabled;
 }
 
-// ---- R2 public domains ----
-
-function r2Path(accountId: string, cfg: SwitchConfig, domain: string) {
-  const base = `/accounts/${accountId}/r2/buckets/${cfg.bucket}/domains`;
-  return domain === "managed" ? `${base}/managed` : `${base}/custom/${domain.slice("custom:".length)}`;
-}
-const r2Domains = (cfg: SwitchConfig) =>
-  cfg.bucket ? [...(cfg.r2Domain ? [`custom:${cfg.r2Domain}`] : []), "managed"] : [];
-
 // ---- stop / resume / status ----
 
-/** Flag first (that alone stops uploads and files), then firewall, then R2 domains. A failing step never undoes the others. */
+/** Flag first (that alone stops uploads and files), then the firewall. A failing firewall step never undoes the flag. */
 export async function stopAll(
   api: Api,
-  accountId: string,
   store: Store,
   cfg: SwitchConfig,
   why: { reason: Stop["reason"]; estimateUsd?: number },
@@ -143,36 +134,19 @@ export async function stopAll(
 ): Promise<Stop> {
   const stop: Stop = { at: now.toISOString(), reason: why.reason, estimateUsd: why.estimateUsd ?? 0, disabled: [] };
   await store.save({ ...stop, disabled: [] });
-  /** Runs one part of the stop; its name if it turned something off. */
-  const step = async (name: string, run: () => Promise<boolean>) => {
-    try {
-      return (await run()) ? name : null;
-    } catch (e) {
-      console.error(`Kill switch: couldn't stop ${name}: ${(e as Error).message}`);
-      return null;
-    }
-  };
-  const done = await Promise.all([
-    step("firewall", () => setFirewall(api, cfg.zone, true)),
-    ...r2Domains(cfg).map((domain) =>
-      step(domain, async () => {
-        const { enabled } = await api<{ enabled: boolean }>(r2Path(accountId, cfg, domain));
-        if (enabled) await api(r2Path(accountId, cfg, domain), { method: "PUT", body: { enabled: false } });
-        return enabled; // only what was on is remembered (r2.dev stays off if it was off)
-      }),
-    ),
-  ]);
-  stop.disabled = done.filter((name): name is string => name !== null);
+  try {
+    if (await setFirewall(api, cfg.zone, true)) stop.disabled = ["firewall"];
+  } catch (e) {
+    console.error(`Kill switch: couldn't turn on the firewall rule: ${(e as Error).message}`);
+  }
   await store.save(stop);
   return stop;
 }
 
-/** Undo: firewall off, turn back on what the stop turned off, remove the row. Throws if a step fails (run it again). */
-export async function resumeAll(api: Api, accountId: string, store: Store, cfg: SwitchConfig) {
+/** Undo: firewall off, remove the row. Throws if the firewall step fails (run it again). */
+export async function resumeAll(api: Api, store: Store, cfg: SwitchConfig) {
   const stop = await store.get();
   await setFirewall(api, cfg.zone, false); // always: also clears a rule left on by hand
-  const domains = (stop?.disabled ?? []).filter((d) => d !== "firewall");
-  await Promise.all(domains.map((d) => api(r2Path(accountId, cfg, d), { method: "PUT", body: { enabled: true } })));
   await store.clear();
   return stop;
 }

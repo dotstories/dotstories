@@ -125,16 +125,16 @@ jobs:
           scripts/ci.sh pnpm exec opennextjs-cloudflare deploy
           # No workers.dev: everything goes through dotstories.com (firewall, cache, kill switch).
           echo "url=https://dotstories.com" >> "$GITHUB_OUTPUT"
-          # blog.dotstories.com: static, its own Worker
-          scripts/ci.sh pnpm blog:build
-          scripts/ci.sh pnpm exec wrangler deploy -c blog/wrangler.jsonc
-          # Budget guard: hourly cron, pulls the kill switch over the budget (README: "Kill switch")
+          # Budget guard first (bill protection): hourly cron, pulls the kill switch over the budget (README: "Kill switch")
           scripts/ci.sh pnpm exec wrangler deploy -c workers/budget-guard/wrangler.jsonc
           if [ -n "$BUDGET_GUARD_API_TOKEN" ]; then
             printf '%s' "$BUDGET_GUARD_API_TOKEN" | pnpm exec wrangler secret put CF_API_TOKEN -c workers/budget-guard/wrangler.jsonc >/dev/null
           else
             echo "::warning title=Budget guard::Add the BUDGET_GUARD_API_TOKEN secret, or the guard can't read your usage (README: Kill switch)."
           fi
+          # blog.dotstories.com: static, its own Worker, custom domain attached by wrangler
+          scripts/ci.sh pnpm blog:build
+          scripts/ci.sh pnpm exec wrangler deploy -c blog/wrangler.jsonc
 
       - name: Smoke test live site
         env:
