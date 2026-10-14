@@ -4,6 +4,8 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "dotstories-blog",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false, // only through blog.dotstories.com, behind the firewall and the kill switch
+  "preview_urls": false,
   "assets": {
     "directory": "./dist",
     "html_handling": "drop-trailing-slash", // /what-is-a-dot.html is served at /what-is-a-dot

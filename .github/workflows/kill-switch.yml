@@ -1,0 +1,35 @@
+name: Kill switch
+
+# By hand: stop everything that can cost money, check it, bring it back (README: "Kill switch").
+# The budget guard pulls the same switch automatically over the budget.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do"
+        type: choice
+        options: [status, stop, resume]
+        default: status
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kill-switch
+
+jobs:
+  switch:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/kill-switch.mts "$ACTION"
+        env:
+          ACTION: ${{ inputs.action }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.BUDGET_GUARD_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

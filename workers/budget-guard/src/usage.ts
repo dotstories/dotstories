@@ -1,5 +1,5 @@
 // Month-to-date usage of the whole account, from the GraphQL Analytics API.
-import type { Usage } from "./cost";
+import type { Usage } from "./cost.ts";
 
 // https://developers.cloudflare.com/r2/pricing/ (checked 2026-10-14). Anything else counts as Class A.
 const CLASS_B = new Set([

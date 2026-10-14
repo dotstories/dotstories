@@ -1,10 +1,11 @@
 /** @jest-environment node */
 import { check } from "../../workers/budget-guard/src/index";
-import type { Stop } from "../../workers/budget-guard/src/kill";
+import type { Stop } from "../../workers/budget-guard/src/switch";
 
 const env = {
   BUDGET_USD: "19",
   ACCOUNT_ID: "acc",
+  ZONE: "dotstories.com",
   R2_BUCKET: "",
   R2_DOMAIN: "",
   BILLING_DAY: "1",
@@ -52,7 +53,7 @@ it("over budget: stops, once", async () => {
   const store = memoryStore();
   expect(await check(env, store, new Date(), analytics(usd(20)))).toBe("stopped");
   expect(store.save).toHaveBeenCalled();
-  expect(error).toHaveBeenCalledWith(expect.stringContaining("BUDGET STOP"));
+  expect(error).toHaveBeenCalledWith(expect.stringContaining("KILL SWITCH (budget)"));
 
   const f = analytics(usd(30));
   expect(await check(env, store, new Date(), f as never)).toBe("already-stopped");
