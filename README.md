@@ -25,6 +25,7 @@ One-time setup, in GitHub → Settings → Secrets and variables → Actions:
 |---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → Account ID (right sidebar) |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create → "Edit Cloudflare Workers" template |
+| `ZEPTOMAIL_TOKEN` | ZeptoMail (zoho.eu) → Agents → your agent → SMTP/API → API → **Send Mail Token**. Sign-up codes and password resets. Prepaid credits, keep **Auto top-up off**: no surprise bills. |
 
 ## License
 
