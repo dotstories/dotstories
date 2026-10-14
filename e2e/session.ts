@@ -10,7 +10,7 @@ export const sql = (query: string): Record<string, string>[] =>
   )[0].results;
 
 export const PASSWORD = "Good1pass";
-export const newEmail = () => `user${Date.now()}${Math.floor(Math.random() * 1e4)}@example.com`;
+export const newEmail = () => `u${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}@example.com`; // short: usernames come from it
 
 /** A fresh, verified, logged-in account. */
 export async function signUp(page: Page) {
