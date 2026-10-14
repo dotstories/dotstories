@@ -25,10 +25,13 @@ const say = (line = "") => {
   report.push(line);
 };
 
+/** A Cloudflare bot check (Bot Fight Mode on a GitHub runner) is also a 403, but the site is open. */
+const CHALLENGED = -1;
+
 async function probe(url: string) {
   try {
     const res = await fetch(url, { redirect: "manual", headers: { "Cache-Control": "no-cache" } });
-    return res.status;
+    return res.headers.get("cf-mitigated") === "challenge" ? CHALLENGED : res.status;
   } catch {
     return 0; // unreachable (e.g. no domain attached yet)
   }
@@ -44,8 +47,10 @@ async function verify(blocked: boolean) {
   }
   say("| Site | HTTP | |");
   say("|---|---|---|");
-  const mark = (c: number) => (c === 0 ? "⚠️ not reachable (not set up yet?)" : c === 403 ? "⛔ blocked" : "✅ open");
-  sites.forEach((s, i) => say(`| ${s} | ${codes[i] || "-"} | ${mark(codes[i])} |`));
+  const mark = (c: number) =>
+    c === 0 ? "⚠️ not reachable (not set up yet?)" : c === 403 ? "⛔ blocked" : c === CHALLENGED ? "✅ open (bot check shown)" : "✅ open";
+  const code = (c: number) => (c === CHALLENGED ? "403 challenge" : c || "-");
+  sites.forEach((s, i) => say(`| ${s} | ${code(codes[i])} | ${mark(codes[i])} |`));
   return codes.some((c) => c !== 0) && codes.every((c) => c === 0 || (c === 403) === blocked);
 }
 
