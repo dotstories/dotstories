@@ -53,10 +53,11 @@ test("comment, reply, delete your own; others can't delete it", async ({ browser
   const mine = page.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: text });
   await expect(mine).toBeVisible();
 
+  const reply = `Answering myself ${Date.now()}`;
   await mine.getByRole("button", { name: "Reply" }).click();
-  await page.getByLabel("Reply", { exact: true }).fill("Answering myself");
+  await page.getByLabel("Reply", { exact: true }).fill(reply);
   await mine.getByRole("button", { name: "Reply" }).last().click(); // the form's button, under this comment
-  await expect(page.getByText("Answering myself")).toBeVisible();
+  await expect(page.getByText(reply)).toBeVisible();
 
   // Someone else sees it but has no Delete on it.
   const other = await browser.newPage();
@@ -70,16 +71,18 @@ test("comment, reply, delete your own; others can't delete it", async ({ browser
   // Deleting it keeps the reply: the comment shows as [deleted], without its author.
   await mine.getByRole("button", { name: "Delete" }).first().click();
   await expect(page.getByText(text)).toHaveCount(0);
-  await expect(page.getByText("Answering myself")).toBeVisible();
-  const gone = page.getByRole("article", { name: "Comment by [deleted]" }).filter({ hasText: "Answering myself" });
+  await expect(page.getByText(reply)).toBeVisible();
+  // The thread (list item) now holds a [deleted] comment and the reply under it.
+  const thread = page.getByRole("listitem").filter({ hasText: reply }).filter({ has: page.getByRole("article", { name: "Comment by [deleted]" }) });
+  const gone = thread.getByRole("article", { name: "Comment by [deleted]" });
   await expect(gone).toContainText("[deleted]");
   await expect(gone.getByRole("button", { name: "Reply" })).toHaveCount(0); // no replying to a deleted comment
   expect(sql(`SELECT text FROM comment WHERE text = '${text}'`)).toHaveLength(0); // the text is really gone
 
   // Last reply deleted → the empty [deleted] placeholder goes too.
-  await page.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: "Answering myself" }).getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Answering myself")).toHaveCount(0);
-  await expect(page.getByRole("article", { name: "Comment by [deleted]" }).filter({ hasText: "Answering myself" })).toHaveCount(0);
+  await page.getByRole("article", { name: `Comment by ${username}` }).filter({ hasText: reply }).getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText(reply)).toHaveCount(0);
+  await expect(thread).toHaveCount(0);
 });
 
 test("a comment nobody replied to is removed completely", async ({ page }) => {
