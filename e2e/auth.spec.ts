@@ -52,7 +52,7 @@ test("log out and log in again; wrong password is refused", async ({ page }) => 
   await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
 
   await logIn(page, email, "Wrong1pass");
-  await expect(page.getByRole("alert")).toContainText("Wrong email or password.");
+  await expect(page.getByRole("alert").filter({ hasText: "Wrong email or password." })).toBeVisible();
 
   await logIn(page, email);
   await expect(page.getByTestId("username")).toBeVisible();
@@ -64,10 +64,10 @@ test("a wrong code 5 times needs a new code", async ({ page }) => {
   const wrong = codeFor(email) === "000000" ? "111111" : "000000";
   for (let i = 0; i < 4; i++) {
     await verify(page, wrong);
-    await expect(page.getByRole("alert")).toContainText("Wrong code.");
+    await expect(page.getByRole("alert").filter({ hasText: "Wrong code." })).toBeVisible();
   }
   await verify(page, wrong);
-  await expect(page.getByRole("alert")).toContainText("Too many tries");
+  await expect(page.getByRole("alert").filter({ hasText: "Too many tries" })).toBeVisible();
   expect(codeFor(email)).toBeUndefined();
 });
 
