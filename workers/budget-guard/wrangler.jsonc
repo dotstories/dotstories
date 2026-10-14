@@ -5,7 +5,9 @@
   "compatibility_date": "2026-10-01",
   "workers_dev": false,
   "triggers": {
-    "crons": ["0 * * * *"]
+    "crons": [
+      "0 * * * *"
+    ]
   },
   "observability": {
     "enabled": true
@@ -21,9 +23,11 @@
   "vars": {
     "BUDGET_USD": "19",
     "ACCOUNT_ID": "",
+    "ZONE": "dotstories.com",
     "R2_BUCKET": "dotstories-files",
     "R2_DOMAIN": "",
     "BILLING_DAY": "1",
     "WORKERS_PAID": "false"
-  }
+  },
+  "preview_urls": false
 }

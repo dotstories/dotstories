@@ -1,11 +1,20 @@
-// dotstories-budget-guard: every hour, estimate this month's Cloudflare bill; over the budget → stop.
-// Cloudflare has no spending cap (budget alerts only email), so this is ours. See README "Budget stop & reset".
+// dotstories-budget-guard: every hour, estimate this month's Cloudflare bill; over the budget → kill switch.
+// Cloudflare has no spending cap (budget alerts only email), so this is ours. See README "Kill switch".
 import type { D1Database, ExecutionContext, ScheduledController } from "@cloudflare/workers-types";
-import { estimateUsd } from "./cost";
-import { d1Store, kill, type R2Env, type Store } from "./kill";
-import { fetchUsage, periodStart } from "./usage";
+import { estimateUsd } from "./cost.ts";
+import { type Api, cfApi, d1Store, type Store, stopAll } from "./switch.ts";
+import { fetchUsage, periodStart } from "./usage.ts";
 
-export type Config = R2Env & { BUDGET_USD: string; BILLING_DAY: string; WORKERS_PAID: string };
+export type Config = {
+  BUDGET_USD: string;
+  ACCOUNT_ID: string;
+  ZONE: string;
+  R2_BUCKET: string;
+  R2_DOMAIN: string;
+  BILLING_DAY: string;
+  WORKERS_PAID: string;
+  CF_API_TOKEN: string;
+};
 export type Env = Config & { DB: D1Database };
 export type Result = "ok" | "warning" | "stopped" | "already-stopped" | "error";
 
@@ -39,8 +48,10 @@ export async function check(env: Config, store: Store, now = new Date(), f: type
   }
 
   if (cost >= budget) {
-    const stop = await kill(env, store, cost, now, f);
-    console.error(`BUDGET STOP: $${cost.toFixed(2)} ≥ $${budget}. Uploads and files are off. Turned off: ${stop.disabled.join(", ") || "-"}`);
+    const api: Api = cfApi(env.CF_API_TOKEN, f);
+    const cfg = { zone: env.ZONE, bucket: env.R2_BUCKET, r2Domain: env.R2_DOMAIN };
+    const stop = await stopAll(api, env.ACCOUNT_ID, store, cfg, { reason: "budget", estimateUsd: cost }, now);
+    console.error(`KILL SWITCH (budget): $${cost.toFixed(2)} ≥ $${budget}. Stopped: ${stop.disabled.join(", ") || "app only"}`);
     return "stopped";
   }
   if (cost >= budget * WARN_AT) {
