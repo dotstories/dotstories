@@ -3,7 +3,7 @@ export default function Avatar({ src, name, size = 28 }: { src: string | null | 
   const style = { width: size, height: size };
   if (src)
     // eslint-disable-next-line @next/next/no-img-element -- user uploads, already compressed
-    return <img src={src} alt={`${name}'s picture`} style={style} className="rounded-full object-cover" />;
+    return <img src={src} alt={name} style={style} className="rounded-full object-cover" />;
   return (
     <span
       aria-hidden
