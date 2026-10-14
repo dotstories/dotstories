@@ -5,7 +5,15 @@ import { randomBytes } from "node:crypto";
 if (!existsSync(".dev.vars")) {
   writeFileSync(
     ".dev.vars",
-    [`AUTH_SECRET=${randomBytes(32).toString("base64")}`, "MAIL_LOG=1", "SITE_URL=http://localhost:8787", "FILES_ORIGIN="].join("\n") + "\n",
+    [
+      `AUTH_SECRET=${randomBytes(32).toString("base64")}`,
+      "MAIL_LOG=1",
+      "SITE_URL=http://localhost:8787",
+      "FILES_ORIGIN=",
+      // Fake X keys: the "Continue with X" button shows up, so e2e can check the cookies it sets (X itself is never called).
+      "AUTH_TWITTER_ID=e2e-fake",
+      "AUTH_TWITTER_SECRET=e2e-fake",
+    ].join("\n") + "\n",
   );
   console.log("Created .dev.vars (local secrets, emails are logged instead of sent)");
 }
