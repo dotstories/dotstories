@@ -30,3 +30,35 @@ writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
 console.log(`D1 ${d1.database_name} → ${db.uuid}`);
 
 console.log(wrangler("d1", "migrations", "apply", d1.binding, "--remote"));
+
+// Secrets. AUTH_SECRET is created once if the Worker doesn't have one.
+// The rest are copied from GitHub secrets when set (Settings → Secrets and variables → Actions).
+const COPIED = [
+  "RESEND_API_KEY",
+  "AUTH_GOOGLE_ID",
+  "AUTH_GOOGLE_SECRET",
+  "AUTH_GITHUB_ID",
+  "AUTH_GITHUB_SECRET",
+  "AUTH_TWITTER_ID",
+  "AUTH_TWITTER_SECRET",
+];
+let existing = [];
+try {
+  existing = JSON.parse(wrangler("secret", "list", "--format", "json")).map((s) => s.name);
+} catch {
+  // first deploy: the Worker doesn't exist yet
+}
+const secrets = Object.fromEntries(COPIED.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
+if (!existing.includes("AUTH_SECRET")) {
+  const { randomBytes } = await import("node:crypto");
+  secrets.AUTH_SECRET = randomBytes(32).toString("base64");
+}
+if (Object.keys(secrets).length) {
+  writeFileSync(".secrets.json", JSON.stringify(secrets));
+  try {
+    wrangler("secret", "bulk", ".secrets.json");
+  } finally {
+    writeFileSync(".secrets.json", "{}");
+  }
+  console.log(`Secrets set: ${Object.keys(secrets).join(", ")}`);
+}
