@@ -62,8 +62,10 @@ test("a wrong code 5 times needs a new code", async ({ page }) => {
   const email = newEmail();
   await register(page, email);
   const wrong = codeFor(email) === "000000" ? "111111" : "000000";
-  for (let i = 0; i < 4; i++) {
+  for (let i = 1; i <= 4; i++) {
     await verify(page, wrong);
+    // Wait for this try to be counted (the error from the last try is still on screen).
+    await expect.poll(() => sql(`SELECT attempts FROM email_code WHERE email = '${email}'`)[0]?.attempts).toBe(i);
     await expect(page.getByRole("alert").filter({ hasText: "Wrong code." })).toBeVisible();
   }
   await verify(page, wrong);
