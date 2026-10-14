@@ -47,18 +47,26 @@ const killRule = (rules: Rule[] | null) => rules?.find((r) => r.ref === RULE_REF
 beforeEach(() => jest.spyOn(console, "error").mockImplementation(() => {}));
 afterEach(() => jest.restoreAllMocks());
 
-it("stop: flag first, then the firewall rule that blocks every dotstories.com host; nothing else is touched", async () => {
+it("stop: the firewall rule that blocks every dotstories.com host, then the D1 row; nothing else is touched", async () => {
   const state = { rules: null };
   const { api, f, calls } = cloudflare(state);
   const store = memoryStore();
   const stop = await stopAll(api, store, cfg, { reason: "manual" }, new Date("2026-10-14T12:00:00Z"));
 
-  expect(store.save.mock.calls[0][0]).toEqual({ at: "2026-10-14T12:00:00.000Z", reason: "manual", estimateUsd: 0, disabled: [] });
-  expect(stop.disabled).toEqual(["firewall"]);
+  expect(stop).toEqual({ at: "2026-10-14T12:00:00.000Z", reason: "manual", estimateUsd: 0, disabled: ["firewall"] });
   expect(killRule(state.rules)).toMatchObject({ action: "block", enabled: true, expression: expect.stringContaining('ends_with(http.host, ".dotstories.com")') });
   expect(calls.every((c) => c.includes("/zones"))).toBe(true); // no R2 calls: the token needs no R2 access
   expect(await store.get()).toEqual(stop);
   expect((f.mock.calls[0][1] as RequestInit).headers).toMatchObject({ Authorization: "Bearer t" });
+});
+
+it("stop: D1 down or over its daily limit → the firewall still goes on", async () => {
+  const state = { rules: null };
+  const store = { get: async () => null, save: jest.fn(async () => Promise.reject(new Error("D1 limit"))), clear: async () => {} };
+  const stop = await stopAll(cloudflare(state).api, store, cfg, { reason: "manual" });
+  expect(stop.disabled).toEqual(["firewall"]);
+  expect(killRule(state.rules)!.enabled).toBe(true);
+  expect(console.error).toHaveBeenCalledWith(expect.stringContaining("D1"));
 });
 
 it("stop: other firewall rules stay; the kill rule goes first", async () => {
