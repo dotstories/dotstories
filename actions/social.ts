@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { comments, dotLikes, dotStats } from "@/db/schema";
@@ -49,25 +49,40 @@ export async function addComment(values: unknown): Promise<CommentResult> {
   if (parentId) {
     // Replies go one level deep, on the same dot.
     const parent = await db.select().from(comments).where(eq(comments.id, parentId)).get();
-    if (!parent || parent.slug !== slug || parent.parentId) return { error: "You can't reply to that." };
+    if (!parent || parent.slug !== slug || parent.parentId || parent.deletedAt) return { error: "You can't reply to that." };
   }
   await db.batch([db.insert(comments).values({ slug, text, parentId, userId: session.user.id }), bump(slug, "comments", 1)]);
   revalidatePath(`/dots/${slug}`);
   return { ok: true };
 }
 
+/**
+ * Delete my comment. The text is gone right away (we keep no copy).
+ * Nobody replied → the row is removed. Others replied → their replies stay, under "[deleted]" without an author.
+ */
 export async function deleteComment(id: string): Promise<CommentResult> {
   const session = await auth();
   if (!session) return { login: true };
   const db = getDb();
   const comment = await db.select().from(comments).where(eq(comments.id, id)).get();
-  if (!comment || comment.userId !== session.user.id) return { error: "You can only delete your own comments." };
+  if (!comment || comment.deletedAt || comment.userId !== session.user.id) return { error: "You can only delete your own comments." };
 
-  const replies = comment.parentId ? [] : await db.select({ id: comments.id }).from(comments).where(eq(comments.parentId, id)).all();
+  const hasReplies = !comment.parentId && !!(await db.select({ id: comments.id }).from(comments).where(eq(comments.parentId, id)).get());
   await db.batch([
-    db.delete(comments).where(eq(comments.parentId, id)),
-    db.delete(comments).where(eq(comments.id, id)),
-    bump(comment.slug, "comments", -(1 + replies.length)),
+    hasReplies
+      ? db.update(comments).set({ text: "", deletedAt: new Date() }).where(eq(comments.id, id))
+      : db.delete(comments).where(eq(comments.id, id)),
+    // Its last reply is gone → an empty "[deleted]" parent has nothing left to hold together.
+    db
+      .delete(comments)
+      .where(
+        and(
+          eq(comments.id, comment.parentId ?? ""),
+          isNotNull(comments.deletedAt),
+          sql`NOT EXISTS (SELECT 1 FROM comment AS reply WHERE reply.parentId = ${comment.parentId ?? ""})`,
+        ),
+      ),
+    bump(comment.slug, "comments", -1),
   ]);
   revalidatePath(`/dots/${comment.slug}`);
   return { ok: true };
