@@ -23,8 +23,10 @@ export async function deleteAccount(_prev: DeleteResult, form: FormData): Promis
     return { error: "Type your username exactly to confirm." };
 
   const db = getDb();
-  const liked = await db.select({ slug: dotLikes.slug }).from(dotLikes).where(eq(dotLikes.userId, user.id));
-  const commented = await db.select({ slug: comments.slug }).from(comments).where(eq(comments.userId, user.id));
+  const [liked, commented] = await Promise.all([
+    db.select({ slug: dotLikes.slug }).from(dotLikes).where(eq(dotLikes.userId, user.id)),
+    db.select({ slug: comments.slug }).from(comments).where(eq(comments.userId, user.id)),
+  ]);
   const slugs = [...new Set([...liked, ...commented].map((r) => r.slug))];
 
   await deleteFolder(`u/${user.id}/`);
