@@ -11,33 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  # PRs may change dependencies: refresh the lockfile and commit it back.
+  # Runs no package code (--ignore-scripts): the write token never sits next to untrusted code.
+  lockfile:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
-      contents: write # lets the lockfile step push to PR branches
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.head_ref || github.ref }}
-
+          ref: ${{ github.head_ref }}
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: pnpm
-
-      # PRs may change dependencies: refresh the lockfile and commit it back.
-      # main always installs exactly what the lockfile says.
-      - name: Install
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            scripts/ci.sh pnpm install --no-frozen-lockfile
-          else
-            scripts/ci.sh pnpm install --frozen-lockfile
-          fi
-
+      - run: scripts/ci.sh pnpm install --lockfile-only --ignore-scripts
       - name: Commit updated lockfile
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           if ! git diff --quiet pnpm-lock.yaml pnpm-workspace.yaml; then
             git config user.name "github-actions[bot]"
@@ -46,7 +36,29 @@ jobs:
             git push
           fi
 
+  # Builds and tests with a read-only token, no stored credentials, exactly the lockfile.
+  test:
+    needs: lockfile
+    if: ${{ !cancelled() && needs.lockfile.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.sha }} # PRs: includes the lockfile update
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: scripts/ci.sh pnpm install --frozen-lockfile
+
       - run: scripts/ci.sh pnpm lint
+      - run: NOTICE=1 TAIL=120 scripts/ci.sh pnpm run lint:react # React audit: correctness, performance, security, a11y
       - run: scripts/ci.sh pnpm typecheck
       - run: scripts/ci.sh pnpm test
       - run: scripts/ci.sh pnpm build:worker # next build + Cloudflare worker
@@ -72,28 +84,31 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Check Cloudflare secrets
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+      # Install and build never see the Cloudflare secrets.
       - run: scripts/ci.sh pnpm install --frozen-lockfile
+      - run: scripts/ci.sh pnpm build:worker
+
       - name: Deploy
         id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          scripts/ci.sh pnpm run deploy | tee deploy.log
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          scripts/ci.sh node scripts/cf-resources.mjs # D1 database + migrations
+          scripts/ci.sh pnpm exec opennextjs-cloudflare deploy | tee deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "::notice title=Live::$url"

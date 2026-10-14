@@ -3,8 +3,29 @@
   "name": "dotstories",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "dotstories" }],
-  "observability": { "enabled": true }
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "dotstories"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dotstories",
+      "database_id": "local-dotstories",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
