@@ -39,7 +39,9 @@ guard.vars.ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 writeFileSync(GUARD, JSON.stringify(guard, null, 2));
 
 // R2 bucket for uploads (needs "R2 Edit" on the token) + CORS so browsers can upload to it directly.
+// R2 not turned on yet → deploy without it: the site works, uploads answer 503 until R2 is on.
 const bucket = config.r2_buckets[0].bucket_name;
+let r2 = true;
 try {
   const list = wrangler("r2", "bucket", "list");
   if (!list.includes(bucket)) {
@@ -47,26 +49,30 @@ try {
     wrangler("r2", "bucket", "create", bucket);
   }
 } catch (e) {
-  fail(
-    "Can't use R2: turn R2 on once (Cloudflare dashboard → R2 Object Storage) and add 'Workers R2 Storage Edit' to the CLOUDFLARE_API_TOKEN permissions.",
-    e,
+  r2 = false;
+  console.log(
+    `::warning title=R2 is off::Uploads are paused. Turn R2 on once (Cloudflare dashboard → R2 Object Storage) and give CLOUDFLARE_API_TOKEN 'Workers R2 Storage Edit'. (${String(e.stderr || e.message).split("\n")[0]})`,
   );
+  delete config.r2_buckets;
+  writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
 }
-writeFileSync(
-  ".cors.json",
-  JSON.stringify({
-    rules: [
-      {
-        allowed: { origins: ["https://dotstories.com", "https://www.dotstories.com"], methods: ["PUT"], headers: ["content-type"] },
-        maxAgeSeconds: 3600,
-      },
-    ],
-  }),
-);
-try {
-  wrangler("r2", "bucket", "cors", "set", bucket, "--file", ".cors.json", "--force");
-} catch (e) {
-  console.log(`::warning::Could not set R2 CORS (direct uploads may fail, the Worker fallback still works): ${e.message}`);
+if (r2) {
+  writeFileSync(
+    ".cors.json",
+    JSON.stringify({
+      rules: [
+        {
+          allowed: { origins: ["https://dotstories.com", "https://www.dotstories.com"], methods: ["PUT"], headers: ["content-type"] },
+          maxAgeSeconds: 3600,
+        },
+      ],
+    }),
+  );
+  try {
+    wrangler("r2", "bucket", "cors", "set", bucket, "--file", ".cors.json", "--force");
+  } catch (e) {
+    console.log(`::warning::Could not set R2 CORS (direct uploads may fail, the Worker fallback still works): ${e.message}`);
+  }
 }
 
 // Secrets. AUTH_SECRET is created once if the Worker doesn't have one.
@@ -89,7 +95,7 @@ try {
   // first deploy: the Worker doesn't exist yet
 }
 const secrets = Object.fromEntries(COPIED.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
-if (secrets.S3_ACCESS_KEY_ID) {
+if (secrets.S3_ACCESS_KEY_ID && r2) {
   secrets.S3_ENDPOINT = `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   secrets.S3_BUCKET = bucket;
 }

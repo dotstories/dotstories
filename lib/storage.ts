@@ -11,8 +11,11 @@ import { checkUpload } from "./uploads";
  */
 const files = () => getCloudflareContext().env.FILES;
 
-/** The budget guard stopped spending this month: no uploads, no file reads (R2 costs). */
-export const spendingStopped = () => budgetStopped(getCloudflareContext().env.DB);
+/** No uploads or file reads: R2 isn't turned on yet, or the kill switch is on (R2 costs). */
+export const spendingStopped = async () => {
+  const env = getCloudflareContext().env as Partial<CloudflareEnv>;
+  return !env.FILES || !env.DB || (await budgetStopped(env.DB));
+};
 
 function s3() {
   const { S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY } = process.env;
