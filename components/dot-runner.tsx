@@ -25,7 +25,7 @@ export default function DotRunner({
   liked?: boolean;
   loggedIn?: boolean;
 }) {
-  const [state, update] = useDotState(dot, initial);
+  const [state, update] = useDotState(dot, initial, loggedIn);
   const newest = latest(dot).version;
   const v = (state.v && findVersion(dot, state.v)) || latest(dot);
 

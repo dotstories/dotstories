@@ -32,3 +32,5 @@ jest.mock("next/navigation", () => ({
 
 // Server actions talk to D1 and Auth.js: not available in unit tests.
 jest.mock("@/actions/social", () => ({ toggleLike: jest.fn(), addComment: jest.fn(), deleteComment: jest.fn() }));
+jest.mock("@/actions/dot-state", () => ({ saveDotState: jest.fn(async () => {}) }));
+jest.mock("@/lib/saved-state", () => ({ sessionWithSetup: jest.fn(async () => null) }));
