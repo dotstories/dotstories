@@ -29,3 +29,6 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
+
+// Server actions talk to D1 and Auth.js: not available in unit tests.
+jest.mock("@/actions/social", () => ({ toggleLike: jest.fn(), addComment: jest.fn(), deleteComment: jest.fn() }));
