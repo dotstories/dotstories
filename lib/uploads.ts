@@ -36,4 +36,21 @@ export const newKey = (userId: string, type: string) => `u/${userId}/${crypto.ra
 export const ownsKey = (userId: string, key: string) =>
   key.startsWith(`u/${userId}/`) && !key.includes("..") && /^[\w./-]+$/.test(key);
 
-export const fileUrl = (key: string) => `/files/${key}`;
+/** Uploaded files are immutable (random names): cache them everywhere for a year. */
+export const FILE_CACHE = "public, max-age=31536000, immutable";
+
+const trim = (origin: string) => origin.replace(/\/$/, "");
+
+/**
+ * Public address of an uploaded file. With FILES_ORIGIN (https://files.dotstories.com) the file is served
+ * by R2 behind Cloudflare's cache: no Worker per request. Without it (local, CI): through the Worker at /files.
+ */
+export const fileUrl = (key: string, origin = process.env.FILES_ORIGIN) => (origin ? `${trim(origin)}/${key}` : `/files/${key}`);
+
+/** The key back from a stored address (either form), or null if it isn't one of our files. */
+export function keyFromUrl(url: string | null | undefined, origin = process.env.FILES_ORIGIN): string | null {
+  if (!url) return null;
+  if (url.startsWith("/files/")) return url.slice("/files/".length);
+  if (origin && url.startsWith(`${trim(origin)}/`)) return url.slice(trim(origin).length + 1);
+  return null;
+}

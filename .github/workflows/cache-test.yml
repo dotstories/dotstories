@@ -1,0 +1,34 @@
+name: Cache test
+
+# Stress test files.dotstories.com: how many requests Cloudflare serves from its cache (no R2 cost).
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "File to hammer"
+        default: "https://files.dotstories.com/cache-test/weeping-gate.jpg"
+      requests:
+        description: "Requests (max 5000)"
+        default: "500"
+      concurrency:
+        description: "At the same time (max 100)"
+        default: "25"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/cache-test.mjs "$URL" --requests "$REQUESTS" --concurrency "$CONCURRENCY"
+        env:
+          URL: ${{ inputs.url }}
+          REQUESTS: ${{ inputs.requests }}
+          CONCURRENCY: ${{ inputs.concurrency }}

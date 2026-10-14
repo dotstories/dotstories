@@ -36,5 +36,8 @@
       "bucket_name": "dotstories-files",
       "jurisdiction": "eu"
     }
-  ]
+  ],
+  "vars": {
+    "FILES_ORIGIN": "https://files.dotstories.com"
+  }
 }

@@ -5,7 +5,7 @@ import { auth, unstable_update } from "@/auth";
 import { users } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { deleteFile, verifyUpload } from "@/lib/storage";
-import { fileUrl, ownsKey } from "@/lib/uploads";
+import { fileUrl, keyFromUrl, ownsKey } from "@/lib/uploads";
 import { getUserById, usernameTaken } from "@/lib/users";
 import { USERNAME } from "@/lib/username";
 
@@ -41,7 +41,7 @@ export async function savePicture(key: unknown): Promise<ProfileResult> {
   await getDb().update(users).set({ image }).where(eq(users.id, session.user.id));
 
   // Remove the old picture if it was uploaded here.
-  const old = before?.image?.startsWith("/files/") ? before.image.slice("/files/".length) : null;
+  const old = keyFromUrl(before?.image);
   if (old && ownsKey(session.user.id, old)) await deleteFile(old);
 
   await unstable_update({});
