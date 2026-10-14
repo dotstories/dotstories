@@ -1,0 +1,68 @@
+name: Runner app
+
+on:
+  pull_request:
+    paths: ["runner/**", ".github/workflows/runner-app.yml"]
+  push:
+    branches: [main]
+    paths: ["runner/**", ".github/workflows/runner-app.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: runner-app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.13.0"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            uv: uv-x86_64-pc-windows-msvc.zip
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            uv: uv-aarch64-apple-darwin.tar.gz
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: runner/app/src-tauri
+
+      # The app ships uv next to its binary: uv installs Python + the engine on first run.
+      - name: Bundle uv
+        run: |
+          cd runner/app/src-tauri/binaries
+          curl -fsSL -o uv-archive "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${{ matrix.uv }}"
+          if [[ "${{ matrix.uv }}" == *.zip ]]; then
+            unzip -o -j uv-archive uv.exe && mv uv.exe "uv-${{ matrix.target }}.exe"
+          else
+            tar -xzf uv-archive --strip-components=1 && mv uv "uv-${{ matrix.target }}" && rm -f uvx
+          fi
+          rm uv-archive && ls -la
+
+      - name: Test
+        run: ../../../scripts/ci.sh cargo test
+        working-directory: runner/app/src-tauri
+
+      - name: Build installer
+        run: ../../scripts/ci.sh npx --yes @tauri-apps/cli@2.12.2 build --target ${{ matrix.target }}
+        working-directory: runner/app
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DotStories-${{ matrix.target }}
+          path: |
+            runner/app/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            runner/app/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14

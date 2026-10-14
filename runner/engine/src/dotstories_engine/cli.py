@@ -77,13 +77,38 @@ def model_runner():
     return run
 
 
+def watch_parent(pid: int, alive=None, stop=lambda: os._exit(0), interval: float = 2.0):
+    """The app started us: when the app is gone, stop too (no orphan GPU process)."""
+    import psutil
+    import threading
+
+    alive = alive or psutil.pid_exists
+
+    def loop():
+        while alive(pid):
+            time.sleep(interval)
+        stop()
+
+    t = threading.Thread(target=loop, daemon=True)
+    t.start()
+    return t
+
+
 def serve(port: int):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))
+    if parent := os.environ.get("DOTSTORIES_PARENT_PID"):
+        watch_parent(int(parent))
     start_sandbox()
     from .server import make_server
 
+    status = info()
     srv = make_server(port, HOME / "output", model_runner(), info)
-    emit({"event": "serving", "url": f"http://127.0.0.1:{srv.server_address[1]}"})
+    emit({
+        "event": "serving",
+        "url": f"http://127.0.0.1:{srv.server_address[1]}",
+        "device": status["hardware"]["name"],
+        "estimate": status["estimate"]["label"],
+    })
     srv.serve_forever()
 
 
