@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { login, newPassword, register, requestReset, resendCode, verify } from "@/actions/auth";
 import { PASSWORD_RULES } from "@/lib/auth-schemas";
-import { formValues, useSubmit } from "./use-submit";
+import { useSubmit } from "./use-submit";
 
 function FormError({ message }: { message: string }) {
   if (!message) return null;
@@ -35,21 +35,16 @@ function useDone(next: string) {
 export function CredentialsForm({ mode, next }: { mode: "login" | "register"; next: string }) {
   const done = useDone(next);
   const [pendingVerify, setPendingVerify] = useState<{ email: string; password: string } | null>(null);
-  const { pending, error, submit } = useSubmit(mode === "login" ? login : register, (r, v) =>
+  const { pending, error, values, run } = useSubmit(mode === "login" ? login : register, (r, v) =>
     r.verify ? setPendingVerify({ email: v.email, password: v.password }) : done(),
   );
 
   if (pendingVerify) return <VerifyForm {...pendingVerify} next={next} />;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit(formValues(e.currentTarget));
-      }}
-    >
+    <form action={run}>
       <Stack gap={5}>
-        <TextInput id="email" name="email" type="email" labelText="Email" autoComplete="email" required />
+        <TextInput id="email" name="email" type="email" labelText="Email" autoComplete="email" defaultValue={values.email} required />
         <PasswordInput
           id="password"
           name="password"
@@ -79,52 +74,47 @@ export function CredentialsForm({ mode, next }: { mode: "login" | "register"; ne
 function VerifyForm({ email, password, next }: { email: string; password: string; next: string }) {
   const done = useDone(next);
   const [resent, setResent] = useState(false);
-  const { pending, error, submit } = useSubmit(verify, () => done());
+  const { pending, error, run } = useSubmit(verify, () => done(), () => ({ email, password }));
   const resend = useSubmit(resendCode, () => setResent(true));
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit({ email, password, code: formValues(e.currentTarget).code });
-      }}
-    >
-      <Stack gap={5}>
-        <p>
-          We sent a 6-digit code to <strong>{email}</strong>.
-        </p>
-        <TextInput
-          id="code"
-          name="code"
-          labelText="Code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          pattern="\d{6}"
-          maxLength={6}
-          required
-        />
-        <FormError message={error || resend.error} />
-        <Submit pending={pending}>Verify</Submit>
-        <Button kind="ghost" size="sm" disabled={resend.pending} onClick={() => resend.submit({ email })}>
+    <Stack gap={5}>
+      <form action={run}>
+        <Stack gap={5}>
+          <p>
+            We sent a 6-digit code to <strong>{email}</strong>.
+          </p>
+          <TextInput
+            id="code"
+            name="code"
+            labelText="Code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="\d{6}"
+            maxLength={6}
+            required
+          />
+          <FormError message={error || resend.error} />
+          <Submit pending={pending}>Verify</Submit>
+        </Stack>
+      </form>
+      <form action={resend.run}>
+        <input type="hidden" name="email" defaultValue={email} />
+        <Button type="submit" kind="ghost" size="sm" disabled={resend.pending}>
           {resent ? "New code sent" : "Send a new code"}
         </Button>
-      </Stack>
-    </form>
+      </form>
+    </Stack>
   );
 }
 
 export function ResetForm() {
   const [sent, setSent] = useState(false);
-  const { pending, error, submit } = useSubmit(requestReset, () => setSent(true));
+  const { pending, error, run } = useSubmit(requestReset, () => setSent(true));
   if (sent)
     return <p role="status">If an account exists for that email, we sent a link to reset the password. It works for 30 minutes.</p>;
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit(formValues(e.currentTarget));
-      }}
-    >
+    <form action={run}>
       <Stack gap={5}>
         <TextInput id="email" name="email" type="email" labelText="Email" autoComplete="email" required />
         <FormError message={error} />
@@ -136,7 +126,7 @@ export function ResetForm() {
 
 export function NewPasswordForm({ token }: { token: string }) {
   const [saved, setSaved] = useState(false);
-  const { pending, error, submit } = useSubmit(newPassword, () => setSaved(true));
+  const { pending, error, run } = useSubmit(newPassword, () => setSaved(true), () => ({ token }));
   if (saved)
     return (
       <p role="status">
@@ -147,12 +137,7 @@ export function NewPasswordForm({ token }: { token: string }) {
       </p>
     );
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit({ token, password: formValues(e.currentTarget).password });
-      }}
-    >
+    <form action={run}>
       <Stack gap={5}>
         <PasswordInput id="password" name="password" labelText="New password" autoComplete="new-password" helperText={PASSWORD_RULES} required />
         <FormError message={error} />

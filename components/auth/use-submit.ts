@@ -1,28 +1,30 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState } from "react";
 import type { Result } from "@/actions/auth";
 
-/** Runs a server action from a form: pending state + error message. */
-export function useSubmit(
-  action: (values: unknown) => Promise<Result>,
-  onResult: (r: Result, values: Record<string, string>) => void,
-) {
-  const [pending, start] = useTransition();
-  const [error, setError] = useState("");
-  const submit = (values: Record<string, string>) =>
-    start(async () => {
-      setError("");
+type Values = Record<string, string>;
+type State = { error: string; values: Values };
+
+/**
+ * A form action that calls a server action: pending state, error message, and the last values
+ * (React resets forms after an action; inputs use them as defaultValue so nothing is lost).
+ * extra: values that shouldn't sit in the page (e.g. the password during the code step).
+ */
+export function useSubmit(action: (values: unknown) => Promise<Result>, onResult: (r: Result, values: Values) => void, extra?: () => Values) {
+  const [state, run, pending] = useActionState(
+    async (_: State, form: FormData): Promise<State> => {
+      const values = { ...(Object.fromEntries(form) as Values), ...extra?.() };
       try {
         const r = await action(values);
-        if (r.error) setError(r.error);
-        else onResult(r, values);
+        if (r.error) return { error: r.error, values };
+        onResult(r, values);
+        return { error: "", values };
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong.");
+        return { error: e instanceof Error ? e.message : "Something went wrong.", values };
       }
-    });
-  return { pending, error, submit };
+    },
+    { error: "", values: {} },
+  );
+  return { pending, error: state.error, values: state.values, run };
 }
-
-export const formValues = (form: HTMLFormElement) =>
-  Object.fromEntries(new FormData(form)) as Record<string, string>;
