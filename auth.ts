@@ -4,7 +4,6 @@ import type { Adapter } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import Twitter from "next-auth/providers/twitter";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { LoginSchema } from "@/lib/auth-schemas";
 import { getDb } from "@/lib/db";
@@ -14,12 +13,14 @@ import { getUserByEmail, getUserById, uniqueUsername } from "@/lib/users";
 
 const RECHECK_MS = 5 * 60_000; // how often a session checks that its account still exists
 
-/** Social logins show up when their keys are set (AUTH_GOOGLE_ID, AUTH_GITHUB_ID, AUTH_TWITTER_ID). */
+/**
+ * Social logins show up when their keys are set (AUTH_GOOGLE_ID, AUTH_GITHUB_ID).
+ * No X: since Feb 2026 X charges per API call, and every X login reads the profile (≈ $0.01, prepaid credits).
+ */
 export const socialProviders = () =>
   [
     process.env.AUTH_GOOGLE_ID && { id: "google", name: "Google", provider: Google },
     process.env.AUTH_GITHUB_ID && { id: "github", name: "GitHub", provider: GitHub },
-    process.env.AUTH_TWITTER_ID && { id: "twitter", name: "X", provider: Twitter },
   ].filter((p) => !!p);
 
 function adapter(): Adapter {
