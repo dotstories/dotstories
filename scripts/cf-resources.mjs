@@ -47,7 +47,10 @@ try {
     wrangler("r2", "bucket", "create", bucket);
   }
 } catch (e) {
-  fail("Can't use R2: add 'R2 Edit' (Workers R2 Storage) to the CLOUDFLARE_API_TOKEN permissions.", e);
+  fail(
+    "Can't use R2: turn R2 on once (Cloudflare dashboard → R2 Object Storage) and add 'Workers R2 Storage Edit' to the CLOUDFLARE_API_TOKEN permissions.",
+    e,
+  );
 }
 writeFileSync(
   ".cors.json",
