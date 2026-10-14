@@ -72,5 +72,5 @@ test("empty comments are refused", async ({ page }) => {
   await page.goto(DOT);
   await page.getByLabel("Add a comment").fill("   ");
   await page.getByRole("button", { name: "Post" }).click();
-  await expect(page.getByRole("alert")).toContainText("Write something first.");
+  await expect(page.getByRole("alert").filter({ hasText: "Write something first." })).toBeVisible();
 });
