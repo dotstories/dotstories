@@ -4,7 +4,11 @@ import { z } from "zod";
 export const USERNAME = z
   .string()
   .trim()
-  .regex(/^[A-Za-z0-9._]{1,20}$/, "Use letters, numbers, dots and underscores (max 20).");
+  .regex(/^[A-Za-z0-9._]{1,20}$/, "Use letters, numbers, dots and underscores (max 20).")
+  .refine((name) => !name.toLowerCase().startsWith(DELETED_PREFIX), "That username is reserved.");
+
+/** Deleted accounts get "deleted_<id>" (see actions/account.ts); nobody else can pick it. */
+export const DELETED_PREFIX = "deleted_";
 
 /** A first username from an email or a name. Callers add digits if it's taken. */
 export function suggestUsername(from: string) {

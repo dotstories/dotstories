@@ -23,6 +23,7 @@ export const users = sqliteTable("user", {
   createdAt: integer("createdAt", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
+  deletedAt: integer("deletedAt", { mode: "timestamp_ms" }), // account deleted: personal data removed, row kept
 });
 
 export const accounts = sqliteTable(
@@ -103,6 +104,7 @@ export const comments = sqliteTable("comment", {
   createdAt: integer("createdAt", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
+  deletedAt: integer("deletedAt", { mode: "timestamp_ms" }), // its author deleted their account: text removed
 });
 
 export const dotState = sqliteTable(

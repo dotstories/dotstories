@@ -14,7 +14,8 @@ export default function DeleteAccount({ username }: { username: string }) {
         Delete account
       </h2>
       <p className="text-sm text-[var(--cds-text-secondary)]">
-        Deletes your account, picture, uploads, likes, comments and saved setups. This can&apos;t be undone.
+        Removes your email, name, picture, password, logins, uploads, likes and saved setups. Your comments show as
+        &quot;[deleted]&quot; so replies from others stay readable. This can&apos;t be undone.
       </p>
       <form action={action} className="flex flex-col gap-4 md:max-w-sm">
         <TextInput id="confirm" name="confirm" labelText={`Type ${username} to confirm`} autoComplete="off" required />

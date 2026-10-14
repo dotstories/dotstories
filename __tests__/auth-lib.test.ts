@@ -33,6 +33,12 @@ describe("usernames", () => {
     for (const bad of ["", "x".repeat(21), "da yo", "dayo!", "dayo-nel", "ñandu"]) expect(USERNAME.safeParse(bad).success).toBe(false);
   });
 
+  it("deleted_… is reserved for deleted accounts", () => {
+    expect(USERNAME.safeParse("deleted_abc").success).toBe(false);
+    expect(USERNAME.safeParse("Deleted_x").success).toBe(false);
+    expect(USERNAME.safeParse("deletedfan").success).toBe(true);
+  });
+
   it("suggests one from an email or name", () => {
     expect(suggestUsername("nestor.p@example.com")).toBe("nestor.p");
     expect(suggestUsername("Néstor Plysyuk")).toBe("nestor_plysyuk");

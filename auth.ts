@@ -11,6 +11,8 @@ import { getDb } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 import { getUserByEmail, getUserById, uniqueUsername } from "@/lib/users";
 
+const RECHECK_MS = 5 * 60_000; // how often a session checks that its account still exists
+
 /** Social logins show up when their keys are set (AUTH_GOOGLE_ID, AUTH_GITHUB_ID, AUTH_TWITTER_ID). */
 export const socialProviders = () =>
   [
@@ -55,11 +57,15 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth(() 
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user) token.username = user.username;
-      if (trigger === "update" && token.sub) {
-        // Username or picture changed on the profile.
+      const stale = Date.now() - ((token.checkedAt as number | undefined) ?? 0) > RECHECK_MS;
+      if (token.sub && (trigger === "update" || (!user && stale))) {
+        // Username or picture changed on the profile; or, every few minutes: the account still exists.
+        // A deleted account is logged out on every device, not only where it was deleted.
         const fresh = await getUserById(token.sub);
-        if (fresh) Object.assign(token, { username: fresh.username, picture: fresh.image });
+        if (!fresh || fresh.deletedAt) return null;
+        Object.assign(token, { username: fresh.username, picture: fresh.image, checkedAt: Date.now() });
       }
+      if (user) token.checkedAt = Date.now();
       return token;
     },
     session({ session, token }) {
