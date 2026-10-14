@@ -4,7 +4,7 @@ import "server-only";
  * Emails go out through ZeptoMail (Zoho), EU data center. Prepaid credits: no surprise bills.
  * ZEPTOMAIL_TOKEN = the agent's "Send Mail Token". MAIL_LOG=1 (local, tests): logged instead of sent.
  */
-const API = () => process.env.ZEPTOMAIL_API ?? "https://api.zeptomail.eu/v1.1/email";
+const API = () => process.env.ZEPTOMAIL_API ?? "https://cpaas.zoho.eu/v1.1/email";
 const FROM = { address: process.env.MAIL_FROM ?? "noreply@dotstories.com", name: "DotStories" };
 const SITE = () => process.env.SITE_URL ?? "https://dotstories.com";
 

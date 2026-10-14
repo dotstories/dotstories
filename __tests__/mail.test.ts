@@ -18,10 +18,10 @@ const sent = () => {
   return { url, headers: init.headers as Record<string, string>, body: JSON.parse(String(init.body)) };
 };
 
-it("sends through ZeptoMail EU with the send mail token", async () => {
+it("sends through Zoho (EU) with the send mail token", async () => {
   await sendCode("ana@example.com", "123456");
   const { url, headers, body } = sent();
-  expect(url).toBe("https://api.zeptomail.eu/v1.1/email");
+  expect(url).toBe("https://cpaas.zoho.eu/v1.1/email");
   expect(headers.Authorization).toBe("Zoho-enczapikey abc123");
   expect(body).toMatchObject({
     from: { address: "noreply@dotstories.com", name: "DotStories" },
