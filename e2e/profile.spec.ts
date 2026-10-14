@@ -18,7 +18,7 @@ test("change your username; taken names (any case) are refused", async ({ browse
 
   await page.getByLabel("Username").fill(taken.toUpperCase());
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("alert")).toContainText("That username is taken.");
+  await expect(page.getByRole("alert").filter({ hasText: "That username is taken." })).toBeVisible();
 
   const mine = `me.${Date.now() % 1e8}_x`;
   await page.getByLabel("Username").fill(mine);
@@ -31,12 +31,12 @@ test("change your username; taken names (any case) are refused", async ({ browse
 });
 
 test("upload a profile picture: compressed to WebP, shown in the header", async ({ page }) => {
-  await signUp(page);
+  const { username } = await signUp(page);
   await page.goto("/profile");
   await page.getByLabel("Profile picture").setInputFiles("e2e/fixtures/avatar.png");
   await expect(page.getByRole("status")).toContainText("Picture saved.");
 
-  const img = page.getByRole("banner").getByRole("img", { name: /picture/ });
+  const img = page.getByRole("banner").getByRole("img", { name: username, exact: true });
   await expect(img).toHaveAttribute("src", /^\/files\/u\/.+\.webp$/);
   expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(512); // square, resized
 
