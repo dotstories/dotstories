@@ -23,15 +23,45 @@ try {
   fail(denied ? "Can't list D1 databases: add 'D1 Edit' to the CLOUDFLARE_API_TOKEN permissions." : "Can't list D1 databases.", e);
 }
 
+// EU jurisdiction: the data never leaves the EU (GDPR). It can only be set when a database is created.
+const D1_JURISDICTION = "eu";
+// The first database ("dotstories") was created without one. Moving = copying it once into the EU database.
+const OLD_D1 = "dotstories";
+
 let db = databases.find((x) => x.name === d1.database_name);
 if (!db) {
-  console.log(`Creating D1 database "${d1.database_name}"…`);
-  wrangler("d1", "create", d1.database_name);
+  console.log(`Creating D1 database "${d1.database_name}" (${D1_JURISDICTION} jurisdiction)…`);
+  wrangler("d1", "create", d1.database_name, "--jurisdiction", D1_JURISDICTION);
   db = json(wrangler("d1", "list", "--json")).find((x) => x.name === d1.database_name);
 }
 d1.database_id = db.uuid;
 writeFileSync("wrangler.jsonc", JSON.stringify(config, null, 2));
 console.log(`D1 ${d1.database_name} → ${db.uuid}`);
+
+/** No migrations table yet = nothing copied or migrated into it yet. */
+function isEmpty() {
+  try {
+    const out = wrangler("d1", "execute", d1.binding, "--remote", "--json", "--command", "SELECT name FROM sqlite_master WHERE name = 'd1_migrations'");
+    return json(out)[0].results.length === 0;
+  } catch {
+    return true;
+  }
+}
+
+if (databases.some((x) => x.name === OLD_D1) && isEmpty()) {
+  // Schema + data + the migrations table, so `migrations apply` below only runs what is new.
+  // The old database is kept (rollback); delete it in the dashboard once the site works.
+  console.log(`Copying "${OLD_D1}" into "${d1.database_name}"…`);
+  try {
+    wrangler("d1", "export", OLD_D1, "--remote", "--output", ".d1-copy.sql");
+    wrangler("d1", "execute", d1.binding, "--remote", "--file", ".d1-copy.sql", "--yes");
+  } catch (e) {
+    fail(`Couldn't copy "${OLD_D1}" into "${d1.database_name}". Nothing was deleted; run the deploy again.`, e);
+  } finally {
+    writeFileSync(".d1-copy.sql", ""); // personal data: don't leave it on the runner
+  }
+  console.log(`::notice title=Database moved to the EU::Copied ${OLD_D1} → ${d1.database_name}. Delete "${OLD_D1}" in Cloudflare → D1 once everything works.`);
+}
 
 console.log(wrangler("d1", "migrations", "apply", d1.binding, "--remote"));
 

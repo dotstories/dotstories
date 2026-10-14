@@ -64,3 +64,4 @@ __pycache__/
 # budget guard local state
 /workers/budget-guard/.wrangler/
 /.guard-build/
+.d1-copy.sql
