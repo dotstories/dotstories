@@ -10,7 +10,7 @@ if (!existsSync(".dev.vars")) {
       "MAIL_LOG=1",
       "SITE_URL=http://localhost:8787",
       "FILES_ORIGIN=",
-      // Fake X keys: the "Continue with X" button shows up, so e2e can check the cookies it sets (X itself is never called).
+      // Leftover X keys must not bring "Continue with X" back (X login was removed: paid API).
       "AUTH_TWITTER_ID=e2e-fake",
       "AUTH_TWITTER_SECRET=e2e-fake",
     ].join("\n") + "\n",

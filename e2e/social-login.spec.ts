@@ -1,26 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test.skip(!!process.env.BASE_URL, "needs the local fake X keys");
+test.skip(!!process.env.BASE_URL, "needs the local .dev.vars");
 
-// "Continue with X" must leave both cookies the callback checks (state + PKCE), or X logins fail with
-// "state value could not be parsed". X itself is never called: the redirect to x.com is stopped here.
-test("Continue with X: state + PKCE cookies are set, state fits X's 500-character limit", async ({ page, context }) => {
-  let authorize: URL | undefined;
-  await context.route(/^https:\/\/(x|twitter)\.com\//, (route) => {
-    authorize = new URL(route.request().url());
-    return route.fulfill({ status: 200, body: "stopped before X" });
-  });
-
+// X login was removed (X's API is paid per call). Even with X keys set (.dev.vars has fake ones), it stays gone.
+test("no 'Continue with X', even when X keys are set", async ({ page, request }) => {
   await page.goto("/login");
-  await page.getByRole("button", { name: "Continue with X" }).click();
-  await expect.poll(() => authorize?.hostname).toMatch(/x\.com|twitter\.com/);
+  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with X" })).toHaveCount(0);
 
-  const state = authorize!.searchParams.get("state");
-  expect(state).toBeTruthy();
-  expect(state!.length).toBeLessThanOrEqual(500);
-  expect(authorize!.searchParams.get("redirect_uri")).toBe("http://localhost:8787/api/auth/callback/twitter");
-
-  const names = (await context.cookies("http://localhost:8787")).map((c) => c.name);
-  expect(names.some((n) => n.endsWith("authjs.state"))).toBe(true);
-  expect(names.some((n) => n.endsWith("authjs.pkce.code_verifier"))).toBe(true);
+  const providers = await (await request.get("/api/auth/providers")).json();
+  expect(Object.keys(providers)).not.toContain("twitter");
 });

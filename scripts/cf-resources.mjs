@@ -160,8 +160,6 @@ const COPIED = [
   "AUTH_GOOGLE_SECRET",
   "AUTH_GITHUB_ID",
   "AUTH_GITHUB_SECRET",
-  "AUTH_TWITTER_ID",
-  "AUTH_TWITTER_SECRET",
   "S3_ACCESS_KEY_ID", // R2 API token: direct uploads (up to 500 MB)
   "S3_SECRET_ACCESS_KEY",
 ];
