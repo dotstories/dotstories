@@ -61,6 +61,7 @@ jobs:
       - run: NOTICE=1 TAIL=120 scripts/ci.sh pnpm run lint:react # React audit: correctness, performance, security, a11y
       - run: scripts/ci.sh pnpm typecheck
       - run: scripts/ci.sh pnpm test
+      - run: scripts/ci.sh pnpm test:blog
       - run: scripts/ci.sh pnpm build:worker # next build + Cloudflare worker
       - run: scripts/ci.sh pnpm bundle:check
 
@@ -122,6 +123,9 @@ jobs:
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "::notice title=Live::$url"
+          # blog.dotstories.com: static, its own Worker
+          scripts/ci.sh pnpm blog:build
+          scripts/ci.sh pnpm exec wrangler deploy -c blog/wrangler.jsonc
 
       - name: Smoke test live site
         env:

@@ -52,3 +52,6 @@ cloudflare-env.d.ts
 /blob-report/
 .secrets.json
 .cors.json
+
+# blog build
+/blog/dist/

@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Otherwise run the built worker locally on the real Cloudflare runtime
 // (needs `pnpm build:worker` first).
 const baseURL = process.env.BASE_URL ?? "http://localhost:8787";
+export const BLOG_URL = process.env.BLOG_URL ?? "http://localhost:8788"; // blog.dotstories.com
 
 export default defineConfig({
   testDir: "e2e",
@@ -14,11 +15,19 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: process.env.BASE_URL
     ? undefined
-    : {
-        command: "pnpm db:migrate:local && pnpm preview:worker --port 8787",
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        stdout: "pipe", // worker errors show up in the test output
-        timeout: 120_000,
-      },
+    : [
+        {
+          command: "pnpm db:migrate:local && pnpm preview:worker --port 8787",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          stdout: "pipe", // worker errors show up in the test output
+          timeout: 120_000,
+        },
+        {
+          command: "pnpm blog:preview --port 8788",
+          url: BLOG_URL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 60_000,
+        },
+      ],
 });
