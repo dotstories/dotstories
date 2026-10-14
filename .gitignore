@@ -51,3 +51,4 @@ cloudflare-env.d.ts
 /playwright-report/
 /blob-report/
 .secrets.json
+.cors.json

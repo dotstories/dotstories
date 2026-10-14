@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import Avatar from "./avatar";
 
 export default async function Header() {
   const session = await auth();
@@ -20,9 +21,10 @@ export default async function Header() {
           </Link>
           {session ? (
             <>
-              <span className="text-sm" data-testid="username">
-                {session.user.username}
-              </span>
+              <Link href="/profile" className="flex items-center gap-2 text-sm" aria-label="Your profile">
+                <Avatar src={session.user.image} name={session.user.username} />
+                <span data-testid="username">{session.user.username}</span>
+              </Link>
               <form
                 action={async () => {
                   "use server";
