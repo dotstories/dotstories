@@ -38,7 +38,7 @@ test("upload a profile picture: compressed to WebP, shown in the header", async 
 
   const img = page.getByRole("banner").getByRole("img", { name: username, exact: true });
   await expect(img).toHaveAttribute("src", /^\/files\/u\/.+\.webp$/);
-  expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(512); // square, resized
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(512); // loaded: square, resized
 
   const res = await page.request.get((await img.getAttribute("src"))!);
   expect(res.headers()["content-type"]).toBe("image/webp");
