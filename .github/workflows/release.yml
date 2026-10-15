@@ -22,10 +22,18 @@ jobs:
         with:
           path: artifacts
       - name: Stable file names
+        # upload-artifact keeps the bundle folders (nsis/, dmg/), so search inside each artifact.
+        # Exactly one installer per platform, or stop: never publish the wrong file.
         run: |
+          find artifacts -type f | sort
+          one() {
+            mapfile -t found < <(find "$1" -type f -name "$2")
+            if [ "${#found[@]}" -ne 1 ]; then echo "::error::Expected 1 $2 in $1, found ${#found[@]}"; exit 1; fi
+            cp "${found[0]}" "$3"
+          }
           mkdir out
-          cp artifacts/DotStories-x86_64-pc-windows-msvc/*.exe out/DotStories-Windows.exe
-          cp artifacts/DotStories-aarch64-apple-darwin/*.dmg out/DotStories-Mac.dmg
+          one artifacts/DotStories-x86_64-pc-windows-msvc '*.exe' out/DotStories-Windows.exe
+          one artifacts/DotStories-aarch64-apple-darwin '*.dmg' out/DotStories-Mac.dmg
           ls -la out
       - name: Publish release
         env:
