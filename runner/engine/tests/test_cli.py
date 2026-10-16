@@ -42,3 +42,16 @@ def test_first_run_line_says_what_is_reused_and_what_still_downloads():
     assert "text encoder + VAE" in comfy and "~10 GB" in comfy
     assert cli.first_run_line(Reuse(snapshot=Path("/hf/snap")), 2) == "Model found on this computer: loading it into memory"
     assert cli.first_run_line(Reuse(), 36) == "First run: downloading ~36 GB from Hugging Face, then loading it"
+
+
+def test_files_to_get_skips_what_is_reused():
+    from pathlib import Path
+
+    from dotstories_engine.models import Reuse
+    from dotstories_engine.progress import RepoFile
+
+    files = [RepoFile("transformer/a.safetensors", 1, "a"), RepoFile("vae/b.safetensors", 1, "b")]
+    fetch = lambda model: files  # noqa: E731
+    assert cli.files_to_get(Reuse(), fetch) == files
+    assert cli.files_to_get(Reuse(transformer=Path("k.safetensors")), fetch) == files[1:]
+    assert cli.files_to_get(Reuse(snapshot=Path("/snap")), lambda m: 1 / 0) == []  # nothing to download: no network
