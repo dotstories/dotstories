@@ -42,8 +42,12 @@ fn main() {
                 })
                 .build(app)?;
 
+            // Python, AI libraries and models (GBs): the local data folder, never Roaming (Windows syncs that).
+            let data = app.path().app_local_data_dir()?;
+            let old_data = app.path().app_data_dir()?;
+            let moved = engine::move_data(&old_data, &data);
             let paths = Paths {
-                data: app.path().app_data_dir()?,
+                data,
                 resources: app.path().resource_dir()?,
                 exe_dir: std::env::current_exe()?.parent().expect("exe folder").to_path_buf(),
             };
@@ -55,6 +59,11 @@ fn main() {
                 live.lock().unwrap().log(&format!("Status server not started: {e}"));
             }
             heartbeat(live.clone());
+            match moved {
+                Ok(true) => live.lock().unwrap().log("Moved the app's data to the local app data folder"),
+                Ok(false) => {}
+                Err(e) => live.lock().unwrap().log(&format!("Could not move the old data folder (it stays, unused): {e}")),
+            }
 
             let child = child.clone();
             thread::spawn(move || {
