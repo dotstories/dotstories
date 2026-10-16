@@ -20,7 +20,7 @@ describe("Header", () => {
   it("links to the community on GitHub", async () => {
     render(await Header());
     const link = screen.getByRole("link", { name: /DotStories on GitHub/ });
-    expect(link).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+    expect(link).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
     expect(link).toHaveAttribute("target", "_blank");
   });
 
@@ -36,8 +36,8 @@ describe("Footer", () => {
   it("invites people to the community on GitHub", () => {
     render(<Footer />);
     expect(screen.getByText(/open source and made by its community/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
-    expect(screen.getByRole("link", { name: "Contribute on GitHub" })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+    expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
+    expect(screen.getByRole("link", { name: "Contribute on GitHub" })).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
   });
 
   it("the project's own socials: Discord, X, GitHub (no personal profiles)", () => {

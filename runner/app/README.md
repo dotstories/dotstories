@@ -31,8 +31,8 @@ git tag runner-v0.1.0 && git push origin runner-v0.1.0
 
 Builds both installers and publishes a GitHub Release with stable names, so these links always point to the newest app:
 
-- https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Windows.exe
-- https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Mac.dmg
+- https://github.com/dotstories/dotstories/releases/latest/download/DotStories-Windows.exe
+- https://github.com/dotstories/dotstories/releases/latest/download/DotStories-Mac.dmg
 
 Bump `version` in `src-tauri/tauri.conf.json` and `Cargo.toml` first.
 

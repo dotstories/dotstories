@@ -1,4 +1,4 @@
-import { REPO } from "./community";
+import { REPO, REPO_SLUG } from "./community";
 
 export type OS = "windows" | "mac" | "phone" | "other";
 
@@ -11,7 +11,7 @@ export const DOWNLOADS = {
 };
 
 /** Is a release published? (GitHub API, no login needed.) */
-export const RELEASE_API = "https://api.github.com/repos/Dayonel/dotstories/releases/latest";
+export const RELEASE_API = `https://api.github.com/repos/${REPO_SLUG}/releases/latest`;
 
 export function detectOS(userAgent: string): OS {
   if (/iPhone|iPad|iPod|Android|Mobile/i.test(userAgent)) return "phone";

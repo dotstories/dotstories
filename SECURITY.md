@@ -7,7 +7,7 @@ the community safe.
 
 **Please don't open a public issue.** Report it privately on GitHub:
 
-👉 [Report a vulnerability](https://github.com/Dayonel/dotstories/security/advisories/new)
+👉 [Report a vulnerability](https://github.com/dotstories/dotstories/security/advisories/new)
 
 Please include:
 
@@ -29,7 +29,7 @@ disrupt the service while testing.
 | Part | Supported |
 |---|---|
 | Website ([dotstories.com](https://dotstories.com)) | The live site (`main`) |
-| Desktop app and engine | The [latest release](https://github.com/Dayonel/dotstories/releases/latest) |
+| Desktop app and engine | The [latest release](https://github.com/dotstories/dotstories/releases/latest) |
 
 ## Out of scope
 
