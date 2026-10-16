@@ -55,6 +55,30 @@ describe("Terms", () => {
     expect(text()).toMatch(/DotStories is free/);
   });
 
+  it("protects the platform like itch.io: indemnity, warranty, transfer, everything else", () => {
+    render(<Terms />);
+    // indemnity: defend, hold harmless, pay damages and costs, incl. lawyers
+    expect(text()).toMatch(/defend us and hold us harmless/i);
+    expect(text()).toMatch(/you pay for our damages and costs if your dots, content or actions cause damage to someone else/i);
+    expect(text()).toMatch(/reasonable lawyers' fees/i);
+    // accounts
+    expect(text()).toMatch(/accounts can't be transferred/i);
+    // use, content, copyright
+    expect(text()).toMatch(/collect other people's personal data/i);
+    expect(text()).toMatch(/to promote DotStories/i);
+    expect(text()).toMatch(/copyright notice/i);
+    expect(text()).toMatch(/counter-notice|object to our decision/i);
+    // warranty, liability
+    expect(text()).toMatch(/always available, error-free or secure/i);
+    expect(text()).toMatch(/third-party sites and services/i);
+    expect(text()).toMatch(/goodwill/i);
+    // ending, transfer, other
+    expect(text()).toMatch(/still apply after your account ends/i);
+    expect(text()).toMatch(/you may not transfer these terms/i);
+    expect(text()).toMatch(/whole agreement/i);
+    expect(text()).toMatch(/not a waiver/i);
+  });
+
   it("16+, reporting, Dutch law", () => {
     render(<Terms />);
     expect(text()).toMatch(/at least 16 years old/);

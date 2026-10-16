@@ -34,7 +34,8 @@ export default function Terms() {
       <ul>
         <li>You must be at least 16 years old to create an account.</li>
         <li>Give correct information, keep your password safe and don&apos;t share your account. You are responsible for what happens on it.</li>
-        <li>One person per account. Accounts made to get around a ban are not allowed.</li>
+        <li>One person per account. Accounts made to get around a ban are not allowed. Accounts can&apos;t be transferred.</li>
+        <li>Some models have a higher minimum age (see section 4).</li>
       </ul>
 
       <h2>3. Community rules</h2>
@@ -73,19 +74,22 @@ export default function Terms() {
         <li>deepfakes meant to deceive or harm, harassment, threats, hate, or content that promotes violence or terrorism;</li>
         <li>content that infringes copyright, trademarks or other rights, including other people&apos;s dots without permission;</li>
         <li>malware, or dots built to harm the computer of the person running them, collect their data or mine cryptocurrency;</li>
-        <li>spam, scams, fake accounts, fake likes or views, or misleading dots;</li>
+        <li>spam, scams, fake accounts, fake likes or views, pretending to be someone else, or misleading dots;</li>
+        <li>attempts to collect other people&apos;s personal data without their consent;</li>
         <li>attacking, overloading, scraping in bulk or probing DotStories, or getting around its limits or security.</li>
       </ul>
 
       <h2>7. Your content</h2>
       <ul>
         <li>
-          You keep all rights to what you post (dots, comments, pictures, files). You give us a free, worldwide, non-exclusive
-          licence to store, copy, show and share it on DotStories as needed to run the service, for as long as it is online.
+          You keep all rights to what you post (dots, comments, pictures, files) and you alone are responsible for it. You give us
+          a free, worldwide, non-exclusive licence to store, copy, show and share it on DotStories as needed to run the service,
+          and to promote DotStories (for example featuring a dot on the site, the blog or social media), for as long as it is
+          online. Copies can stay in backups for a limited time.
         </li>
         <li>
           When you publish a dot, others may view it and run it. If you allow forks, others may copy and change it under the
-          licence you choose.
+          licence you choose. If you remove a dot, people who already got, ran or forked it may keep their copy.
         </li>
         <li>You confirm you have the rights to everything you post and that it doesn&apos;t break any law or anyone&apos;s rights.</li>
       </ul>
@@ -104,6 +108,14 @@ export default function Terms() {
         we act on your content, we tell you why and you can ask us to review the decision. This address is also our point of
         contact for authorities under the EU Digital Services Act; we answer in English or Dutch.
       </p>
+      <p>
+        <strong>Copyright notice.</strong> If you think a dot or other content infringes your copyright, email {mail} with: the
+        work you own, the link to the content, your name and contact details, and a statement that you believe in good faith
+        the use isn&apos;t allowed and that your notice is accurate and you own the rights or may act for the owner. Incomplete
+        notices may not be handled. If we remove your content after a notice, you can object to our decision by replying with
+        why you think it was a mistake; we may restore it. We may stop handling reports from people who often send clearly
+        unfounded ones.
+      </p>
 
       <h2>10. Free for everyone</h2>
       <p>DotStories is free. Dots are shared for everyone to run, learn from and build on.</p>
@@ -119,13 +131,15 @@ export default function Terms() {
       <h2>12. No guarantees</h2>
       <p>
         DotStories is provided &quot;as is&quot;, without guarantees. AI results can be wrong, unexpected or different on other
-        hardware. Dots are made by their authors, not by us, and we don&apos;t check every dot. DotStories, a dot or any content
-        can be changed or taken down at any time.
+        hardware. Dots are made by their authors, not by us, and we don&apos;t check every dot. We don&apos;t promise that
+        DotStories is always available, error-free or secure, or free of harmful code from third parties. Third-party sites and
+        services that DotStories links to or uses (such as Hugging Face and PyPI) are not ours; their own terms
+        apply and we are not responsible for them. DotStories, a dot or any content can be changed or taken down at any time.
       </p>
 
       <h2>13. Liability</h2>
       <p>
-        To the extent the law allows, we are not liable for indirect or consequential damage, lost profit or data, or damage
+        To the extent the law allows, we are not liable for indirect or consequential damage, lost profit, data or goodwill, downtime, or damage
         caused by dots, AI results, third-party software or models, or other users. Our total liability is limited to €100. This is a maximum, not an amount we owe. These limits
         don&apos;t apply to damage caused by intent or gross negligence, and they don&apos;t take away rights consumers have under
         mandatory law.
@@ -133,13 +147,18 @@ export default function Terms() {
 
       <h2>14. Indemnity</h2>
       <p>
-        If your content or your misuse of DotStories causes claims or costs for us, you cover them, to the extent the law allows.
+        To the extent the law allows, you defend us and hold us harmless against claims, damages and costs (including
+        reasonable lawyers&apos; fees) that come from: your use of DotStories; your breach of these terms; your breach of
+        someone else&apos;s rights, such as copyright or privacy; or a claim that your dot or content caused damage to someone
+        else. In short: you pay for our damages and costs if your dots, content or actions cause damage to someone else. We
+        tell you about such a claim and you help us handle it.
       </p>
 
       <h2>15. Ending</h2>
       <p>
         You can stop using DotStories and delete your account at any time in Profile → Delete account (or email {mail}). We can
-        end or suspend your access as described in section 8.
+        end or suspend your access as described in section 8. Sections 5, 7 (for copies others already have), 11 to 14, 17 and
+        19 still apply after your account ends.
       </p>
 
       <h2>16. Changes</h2>
@@ -152,7 +171,21 @@ export default function Terms() {
       <h2>17. Law and disputes</h2>
       <p>
         Dutch law applies. Disputes go to the competent court in Amsterdam, unless mandatory consumer law lets you go to the
-        court where you live. If part of these terms is invalid, the rest still applies.
+        court where you live.
+      </p>
+
+      <h2>18. Transfer</h2>
+      <p>
+        You may not transfer these terms or your rights under them to anyone else. We may transfer them, for example to a
+        foundation or another organization that takes over running DotStories; we will tell you if that happens.
+      </p>
+
+      <h2>19. Everything else</h2>
+      <p>
+        These terms, the <Link href="/privacy">Privacy Policy</Link>, the <Link href="/cookies">Cookie Policy</Link>, the{" "}
+        <Link href="/code-of-conduct">Code of Conduct</Link> and the key points of each model you run are the whole agreement
+        between you and us. If part of these terms is invalid, the rest still applies. If we don&apos;t enforce a rule straight
+        away, that is not a waiver. Headings are only there to help you read.
       </p>
       <p>
         How we handle personal data: see the <Link href="/privacy">Privacy Policy</Link>.
