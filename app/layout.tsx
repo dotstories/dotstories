@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
-import "./carbon.css"; // generated: scripts/carbon-css.mjs
 import "./globals.scss";
 import "./globals.css";
 
