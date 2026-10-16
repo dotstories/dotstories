@@ -17,6 +17,7 @@ export default function DotRunner({
   stats,
   liked,
   loggedIn,
+  acceptedTerms,
 }: {
   dot: Dot;
   initial?: DotState;
@@ -24,6 +25,7 @@ export default function DotRunner({
   stats?: DotStats; // set: show comments, share, likes and views
   liked?: boolean;
   loggedIn?: boolean;
+  acceptedTerms?: string[];
 }) {
   const [state, update] = useDotState(dot, initial, loggedIn);
   const newest = latest(dot).version;
@@ -51,7 +53,14 @@ export default function DotRunner({
         </div>
       )}
       {dot.kind === "image" ? (
-        <Demo dot={dot} version={v.version} inputs={inputsFor(dot, state)} onChange={update} />
+        <Demo
+          dot={dot}
+          version={v.version}
+          inputs={inputsFor(dot, state)}
+          onChange={update}
+          loggedIn={loggedIn}
+          acceptedTerms={acceptedTerms}
+        />
       ) : (
         <MusicPreview dot={dot} version={v.version} />
       )}

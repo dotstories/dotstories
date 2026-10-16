@@ -52,6 +52,9 @@ def info() -> dict:
 def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))  # all downloads in one place
     start_sandbox()
+    from .access import use_token
+
+    use_token()
     from .krea import generate, load_job, load_pipeline, make_generator
     from .sandbox import locked
 
@@ -81,9 +84,12 @@ def model_runner():
         from .krea import generate, load_pipeline, make_generator
         from .sandbox import locked
 
+        from .access import use_token
+
         plan = info()["plan"]
         if plan not in cache:
             emit({"event": "loading"})
+            use_token()  # gated models (Krea 2) download with the person's own token
             cache.clear()
             cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
         with locked():  # no network, no new processes while the dot runs
@@ -109,15 +115,24 @@ def watch_parent(pid: int, alive=None, stop=lambda: os._exit(0), interval: float
     return t
 
 
+def on_disk(model: str) -> bool:
+    """The complete model is on this computer (ours or Hugging Face's cache): no token needed.
+    A ComfyUI file alone isn't enough: the text encoder and VAE still come from Hugging Face."""
+    return bool(reuse().snapshot)
+
+
 def serve(port: int):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))
     if parent := os.environ.get("DOTSTORIES_PARENT_PID"):
         watch_parent(int(parent))
     start_sandbox()
+    from functools import partial
+
+    from . import access
     from .server import make_server
 
     status = info()
-    srv = make_server(port, HOME / "output", model_runner(), info)
+    srv = make_server(port, HOME / "output", model_runner(), info, access=partial(access.access, on_disk=on_disk))
     emit({
         "event": "serving",
         "url": f"http://127.0.0.1:{srv.server_address[1]}",

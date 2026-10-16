@@ -2,7 +2,7 @@
 
 import { eq, inArray, sql } from "drizzle-orm";
 import { auth, signOut } from "@/auth";
-import { accounts, comments, dotLikes, dotState, dotStats, emailCodes, passwordResets, retired, sessions, users } from "@/db/schema";
+import { accounts, comments, dotLikes, dotState, dotStats, emailCodes, modelTerms, passwordResets, retired, sessions, users } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { retiredHash } from "@/lib/retired-hash";
 import { deleteFolder } from "@/lib/storage";
@@ -66,6 +66,7 @@ export async function deleteAccount(_prev: DeleteResult, form: FormData): Promis
     db.delete(sessions).where(eq(sessions.userId, user.id)),
     db.delete(dotLikes).where(eq(dotLikes.userId, user.id)),
     db.delete(dotState).where(eq(dotState.userId, user.id)),
+    db.delete(modelTerms).where(eq(modelTerms.userId, user.id)),
     db.update(comments).set({ text: "", deletedAt: now }).where(eq(comments.userId, user.id)),
     ...(user.email
       ? [db.delete(emailCodes).where(eq(emailCodes.email, user.email)), db.delete(passwordResets).where(eq(passwordResets.email, user.email))]

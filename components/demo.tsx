@@ -3,20 +3,34 @@
 import { PlayFilledAlt } from "@carbon/icons-react";
 import { Button, InlineLoading, InlineNotification, NumberInput, ProgressBar, TextArea } from "@carbon/react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
 import { downloadInstaller, installerFor } from "@/lib/download";
 import type { DotState } from "@/lib/dot-state";
+import { modelFor } from "@/lib/models";
+import { useModelTerms } from "@/lib/use-model-terms";
 import { isRunning, useRunStore } from "@/store/run";
 import InstallApp from "./install-app";
+import ModelAccess from "./model-access";
+import ModelTerms from "./model-terms";
 import SetupLog from "./setup-log";
 
-type Props = { dot: ImageDot; version: string; inputs: Inputs; onChange: (patch: DotState) => void };
+type Props = {
+  dot: ImageDot;
+  version: string;
+  inputs: Inputs;
+  onChange: (patch: DotState) => void;
+  loggedIn?: boolean;
+  acceptedTerms?: string[]; // logged in: model terms accepted before (D1)
+};
 
-export default function Demo({ dot, version, inputs, onChange }: Props) {
+export default function Demo({ dot, version, inputs, onChange, loggedIn = false, acceptedTerms }: Props) {
   const v = findVersion(dot, version) ?? latest(dot);
   const { prompt, seed } = inputs;
-  const { runner, job, image, error, shading, installing, logs, init, start } = useRunStore();
+  const { runner, job, image, error, shading, installing, logs, access, init, start } = useRunStore();
+  const model = modelFor(dot);
+  const [termsAccepted, acceptTerms] = useModelTerms(model, loggedIn, acceptedTerms);
+  const [askTerms, setAskTerms] = useState(false);
   const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
@@ -25,10 +39,12 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
   }, [init]);
 
   // Run: runs now, or finds the app (the browser may ask to allow it), or installs it first.
-  const onRun = () =>
+  const run = () =>
     start(inputs, v.postSteps, () => {
       installerFor(navigator.userAgent).then((os) => os && downloadInstaller(os));
     });
+  // The first run on a model asks to accept its terms.
+  const onRun = () => (termsAccepted ? run() : setAskTerms(true));
 
   return (
     <section aria-label="Try a dot" className="flex flex-col gap-6">
@@ -67,6 +83,7 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
           <Status />
         </div>
         {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
+        {model && access && <ModelAccess model={model} access={access} />}
         {installing ? (
           <InstallApp />
         ) : (
@@ -75,6 +92,19 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
           )
         )}
       </div>
+
+      {model && askTerms && (
+        <ModelTerms
+          model={model}
+          open
+          onClose={() => setAskTerms(false)}
+          onAccept={() => {
+            acceptTerms();
+            setAskTerms(false);
+            run();
+          }}
+        />
+      )}
 
       <p className="text-sm text-[var(--cds-text-secondary)] md:hidden">
         Running a dot needs a desktop computer. You can browse dots here.

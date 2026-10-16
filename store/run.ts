@@ -1,13 +1,17 @@
 import { create } from "zustand";
 import type { Inputs, ShaderStep } from "@/lib/dot";
+import { MODELS } from "@/lib/models";
 import {
+  type Access,
   findRunner,
+  getAccess,
   getJob,
   getSetup,
   imageUrl,
   type JobStatus,
   loopbackPermission,
   type RunnerInfo,
+  saveHfToken,
   type Setup,
   type SetupLine,
   startJob,
@@ -32,7 +36,8 @@ type RunState = {
   shading: boolean; // post-steps running in the browser
   installing: boolean; // the user pressed Run without the app: download + setup in progress
   logs: SetupLine[]; // the app's setup log, live
-  pending: Pending | null; // what to run as soon as the app is ready
+  pending: Pending | null; // what to run as soon as the app is ready (or has model access)
+  access: Access | null; // set: the model needs the person's Hugging Face access first
   watching: boolean;
   pollMs: number;
   watchMs: number;
@@ -41,7 +46,12 @@ type RunState = {
   start: (inputs: Inputs, postSteps?: ShaderStep[], onMissing?: () => void) => Promise<void>;
   watch: () => Promise<void>;
   run: (inputs: Inputs, postSteps?: ShaderStep[]) => Promise<void>;
+  saveToken: (token: string) => Promise<void>;
+  recheckAccess: () => Promise<void>;
 };
+
+// Image dots run on Krea 2 Turbo (lib/models.ts). Gated on Hugging Face.
+const MODEL = MODELS["krea2-turbo"]!.repo;
 
 export const POLL_MS = 500;
 export const WATCH_MS = 1000;
@@ -58,6 +68,7 @@ export const useRunStore = create<RunState>((set, get) => ({
   installing: false,
   logs: [],
   pending: null,
+  access: null,
   watching: false,
   pollMs: POLL_MS,
   watchMs: WATCH_MS,
@@ -126,6 +137,10 @@ export const useRunStore = create<RunState>((set, get) => ({
 
   run: async (inputs, postSteps = []) => {
     set({ job: null, image: null, error: null, shading: false });
+    // A gated model: first make sure this computer may download it (else the run fails after a while).
+    const access = await getAccess(MODEL);
+    if (access && access.status !== "ok") return set({ access, pending: { inputs, postSteps } });
+    set({ access: null });
     let id: string;
     try {
       id = (await startJob(inputs)).id;
@@ -133,6 +148,11 @@ export const useRunStore = create<RunState>((set, get) => ({
         const job = await getJob(id);
         set({ job });
         if (job.status === "done") break;
+        if (job.status === "error" && job.code === "model-access") {
+          // E.g. access was revoked since the check: show the steps again.
+          const again = await getAccess(MODEL);
+          return set({ job: null, access: again ?? { model: MODEL, status: "no-token", url: `https://huggingface.co/${MODEL}` }, pending: { inputs, postSteps } });
+        }
         if (job.status === "error") return set({ error: job.error ?? "Something went wrong" });
         await sleep(get().pollMs);
       }
@@ -155,7 +175,36 @@ export const useRunStore = create<RunState>((set, get) => ({
       set({ shading: false });
     }
   },
+
+  /** The person pasted their Hugging Face token: the app saves it and checks it. */
+  saveToken: async (token) => {
+    set({ error: null });
+    try {
+      const access = await saveHfToken(MODEL, token.trim());
+      set({ access: access.status === "ok" ? null : access });
+      if (access.status === "ok") await runPending(get);
+    } catch (e) {
+      set({ error: message(e) });
+    }
+  },
+
+  /** Accepted the terms on Hugging Face (same token): ask again. */
+  recheckAccess: async () => {
+    set({ error: null });
+    const access = await getAccess(MODEL);
+    if (access && access.status !== "ok") return set({ access });
+    set({ access: null });
+    await runPending(get);
+  },
 }));
+
+/** After the access steps: run what was asked. */
+async function runPending(get: () => RunState) {
+  const p = get().pending;
+  if (!p) return;
+  useRunStore.setState({ pending: null });
+  await get().run(p.inputs, p.postSteps);
+}
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
