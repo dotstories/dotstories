@@ -18,7 +18,7 @@ describe.each([
     render(<Page />);
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
-    expect(screen.getByText(/DotStories is run by Dayonel/)).toBeInTheDocument();
+    expect(screen.getByText(/DotStories is an open-source community project/)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "info@dotstories.com" }).length).toBeGreaterThan(0);
   });
 });

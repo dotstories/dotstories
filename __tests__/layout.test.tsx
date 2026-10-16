@@ -57,9 +57,9 @@ describe("Footer", () => {
     expect(screen.getByRole("link", { name: "Code of Conduct" })).toHaveAttribute("href", "/code-of-conduct");
   });
 
-  it("shows who runs the site: an open-source community project by Dayonel", () => {
+  it("shows DotStories as the name", () => {
     render(<Footer />);
-    expect(screen.getByText(/DotStories, an open-source community project by Dayonel/)).toBeInTheDocument();
+    expect(screen.getByText(/^© \d{4} DotStories$/)).toBeInTheDocument();
   });
 
   it("the logo with dotstories.com links home", () => {

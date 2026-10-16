@@ -1,6 +1,6 @@
 /**
  * Who runs DotStories: an open-source community project.
- * The site shows the nickname; the Terms and the Privacy Policy also name the person (a contract and the GDPR need one).
+ * The site shows only "DotStories"; the Terms and the Privacy Policy name the person (a contract and the GDPR need one).
  */
 export const OPERATOR = {
   name: "Dayonel",
