@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { render, screen } from "@testing-library/react";
 import CodeOfConduct from "../app/code-of-conduct/page";
@@ -23,5 +24,13 @@ it("README links the community files and has no private plan", () => {
 });
 
 it("SECURITY.md sends reports to private vulnerability reporting", () => {
-  expect(read("SECURITY.md")).toContain("https://github.com/Dayonel/dotstories/security/advisories/new");
+  expect(read("SECURITY.md")).toContain("https://github.com/dotstories/dotstories/security/advisories/new");
+});
+
+it("no file links the old repository (it moved to the dotstories org)", () => {
+  const files = execSync("git ls-files", { cwd: `${__dirname}/..`, encoding: "utf8" })
+    .split("\n")
+    .filter((f) => f && f !== "__tests__/repo-docs.test.tsx" && !/\.(png|jpe?g|ico|flac|woff2?|ttf)$/.test(f));
+  const old = files.filter((f) => /github\.com\/(repos\/)?Dayonel\/dotstories\b/i.test(read(f)));
+  expect(old).toEqual([]);
 });

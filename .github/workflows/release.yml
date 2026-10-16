@@ -2,8 +2,8 @@ name: Release runner app
 
 # Push a tag like runner-v0.1.0 → builds the installers → public GitHub Release.
 # Stable download links for the website:
-#   https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Windows.exe
-#   https://github.com/Dayonel/dotstories/releases/latest/download/DotStories-Mac.dmg
+#   https://github.com/dotstories/dotstories/releases/latest/download/DotStories-Windows.exe
+#   https://github.com/dotstories/dotstories/releases/latest/download/DotStories-Mac.dmg
 on:
   push:
     tags: ["runner-v*"]

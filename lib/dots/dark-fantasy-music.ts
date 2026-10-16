@@ -15,7 +15,7 @@ export const darkFantasyMusic: MusicDot = {
     commercial: "Commercial use allowed under $1M yearly revenue",
   },
   forkable: true,
-  source: "https://github.com/Dayonel/dotstories/tree/main/public/dots/dark-fantasy-music",
+  source: "https://github.com/dotstories/dotstories/tree/main/public/dots/dark-fantasy-music",
   versions: [
     {
       version: "1.0.0",

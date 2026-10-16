@@ -14,7 +14,7 @@ export const darkFantasy: ImageDot = {
     commercial: "Commercial use allowed under $1M yearly revenue",
   },
   forkable: true,
-  source: "https://github.com/Dayonel/dotstories/tree/main/public/dots/dark-fantasy",
+  source: "https://github.com/dotstories/dotstories/tree/main/public/dots/dark-fantasy",
   versions: [
     {
       version: "1.0.0",

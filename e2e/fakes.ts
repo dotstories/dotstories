@@ -129,10 +129,10 @@ export async function loopback(page: Page, state: "granted" | "prompt" | "denied
 
 /** A published release, and its installer as a download (no real GitHub). */
 export async function fakeRelease(page: Page) {
-  await page.route("https://api.github.com/repos/Dayonel/dotstories/releases/latest", (r) =>
+  await page.route("https://api.github.com/repos/dotstories/dotstories/releases/latest", (r) =>
     r.fulfill({ json: { tag_name: "runner-v0.2.0" } }),
   );
-  await page.route("https://github.com/Dayonel/dotstories/releases/latest/download/**", (r) =>
+  await page.route("https://github.com/dotstories/dotstories/releases/latest/download/**", (r) =>
     r.fulfill({
       headers: { "Content-Type": "application/octet-stream", "Content-Disposition": "attachment" },
       body: "fake installer",

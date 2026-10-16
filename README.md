@@ -32,7 +32,7 @@ Models are downloaded from their official sources; DotStories doesn't host model
 **You need:** [Node.js 24](https://nodejs.org) and [pnpm](https://pnpm.io/installation) (`corepack enable` installs the version in `package.json`).
 
 ```bash
-git clone https://github.com/Dayonel/dotstories.git
+git clone https://github.com/dotstories/dotstories.git
 cd dotstories
 pnpm install
 pnpm db:migrate:local   # local secrets + local database (run again after pulling new migrations)
