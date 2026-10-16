@@ -1,6 +1,6 @@
 [package]
 name = "dotstories-runner"
-version = "0.1.0"
+version = "0.2.0"
 description = "Runs DotStories dots on your own computer"
 edition = "2021"
 license = "AGPL-3.0-only"

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import Demo from "../components/demo";
 import { latest } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
@@ -18,7 +18,17 @@ const INFO = {
 };
 
 const show = (state: object) => {
-  useRunStore.setState({ job: null, image: null, error: null, shading: false, checkRunner: async () => {}, ...state });
+  useRunStore.setState({
+    job: null,
+    image: null,
+    error: null,
+    shading: false,
+    installing: false,
+    logs: [],
+    init: async () => {},
+    checkRunner: async () => {},
+    ...state,
+  });
   const v = latest(darkFantasy);
   render(<Demo dot={darkFantasy} version={v.version} inputs={v.inputs} onChange={() => {}} />);
 };
@@ -29,10 +39,42 @@ describe("Demo", () => {
     expect(screen.getByLabelText(/prompt/i)).toHaveValue(darkFantasy.versions[0].inputs.prompt);
   });
 
-  it("Run is disabled until the app is found", () => {
-    show({ runner: { state: "missing" } });
-    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  it("without the app, Run installs it (one click)", () => {
+    const start = jest.fn(async () => {});
+    show({ runner: { state: "missing" }, start });
+    expect(screen.getByText(/press run to install it/i)).toBeInTheDocument();
     expect(screen.getByText(/get the free dotstories app/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
+    expect(start).toHaveBeenCalledWith(latest(darkFantasy).inputs, latest(darkFantasy).postSteps, expect.any(Function));
+  });
+
+  it("before the browser asked: explains the Allow question, Run is enabled", () => {
+    show({ runner: { state: "idle" } });
+    expect(screen.getByText(/click allow/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  });
+
+  it("when the browser blocks the app: says how to allow it, Run is disabled", () => {
+    show({ runner: { state: "blocked" } });
+    expect(screen.getByText(/your browser blocks the connection/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  });
+
+  it("shows the app's setup log live", () => {
+    show({
+      runner: {
+        state: "setup",
+        setup: { phase: "installing", message: "Installing AI libraries…", version: "0.2.0", next: 2, lines: [] },
+      },
+      logs: [
+        { n: 0, t: 1, text: "Resolved 84 packages" },
+        { n: 1, t: 65, text: "Downloading torch (2.4 GiB)" },
+      ],
+    });
+    const log = screen.getByRole("log", { name: /setup log/i });
+    expect(log).toHaveTextContent("0:01Resolved 84 packages");
+    expect(log).toHaveTextContent("1:05Downloading torch (2.4 GiB)");
+    expect(screen.getAllByText("Installing AI libraries…").length).toBeGreaterThan(0);
   });
 
   it("shows hardware and time estimate when the app is found", () => {
@@ -67,7 +109,7 @@ describe("Demo", () => {
   });
 
   it("shows the license", () => {
-    show({ runner: { state: "missing" } });
+    show({ runner: { state: "ready", info: INFO } });
     expect(screen.getByText(/krea 2 community license/i)).toBeInTheDocument();
   });
 
