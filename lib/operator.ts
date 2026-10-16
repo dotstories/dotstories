@@ -5,4 +5,4 @@ export const OPERATOR = {
 } as const;
 
 /** Last change to the Terms, Privacy and Cookie pages. */
-export const LEGAL_UPDATED = "14 October 2026";
+export const LEGAL_UPDATED = "16 October 2026";
