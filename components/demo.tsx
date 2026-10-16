@@ -5,21 +5,30 @@ import { Button, InlineLoading, InlineNotification, NumberInput, ProgressBar, Te
 import Link from "next/link";
 import { useEffect } from "react";
 import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
+import { downloadInstaller, installerFor } from "@/lib/download";
 import type { DotState } from "@/lib/dot-state";
 import { isRunning, useRunStore } from "@/store/run";
+import InstallApp from "./install-app";
+import SetupLog from "./setup-log";
 
 type Props = { dot: ImageDot; version: string; inputs: Inputs; onChange: (patch: DotState) => void };
 
 export default function Demo({ dot, version, inputs, onChange }: Props) {
   const v = findVersion(dot, version) ?? latest(dot);
   const { prompt, seed } = inputs;
-  const { runner, job, image, error, shading, checkRunner, run } = useRunStore();
+  const { runner, job, image, error, shading, installing, logs, init, start } = useRunStore();
   const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
   useEffect(() => {
-    checkRunner();
-  }, [checkRunner]);
+    init();
+  }, [init]);
+
+  // Run: runs now, or finds the app (the browser may ask to allow it), or installs it first.
+  const onRun = () =>
+    start(inputs, v.postSteps, () => {
+      installerFor(navigator.userAgent).then((os) => os && downloadInstaller(os));
+    });
 
   return (
     <section aria-label="Try a dot" className="flex flex-col gap-6">
@@ -50,14 +59,21 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
           />
           <Button
             renderIcon={PlayFilledAlt}
-            disabled={runner.state !== "ready" || running || !prompt.trim()}
-            onClick={() => run(inputs, v.postSteps)}
+            disabled={running || !prompt.trim() || runner.state === "checking" || runner.state === "blocked"}
+            onClick={onRun}
           >
             Run
           </Button>
           <Status />
         </div>
         {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
+        {installing ? (
+          <InstallApp />
+        ) : (
+          runner.state === "setup" && (
+            <SetupLog lines={logs} title="DotStories app · setup" status={runner.setup.message} />
+          )
+        )}
       </div>
 
       <p className="text-sm text-[var(--cds-text-secondary)] md:hidden">
@@ -83,7 +99,7 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
 }
 
 function Status() {
-  const { runner, job, shading } = useRunStore();
+  const { runner, job, shading, installing } = useRunStore();
 
   if (shading) return <InlineLoading description="Adding title and effects in your browser…" />;
   if (job?.status === "loading" || job?.status === "queued")
@@ -101,13 +117,25 @@ function Status() {
     );
   }
   if (runner.state === "checking") return <InlineLoading description="Looking for the DotStories app…" />;
-  if (runner.state === "missing")
+  if (installing && runner.state === "missing") return <InlineLoading description="Waiting for the DotStories app to start…" />;
+  if (runner.state === "setup") return <InlineLoading description={runner.setup.message} />;
+  if (runner.state === "blocked")
+    return (
+      <span className="text-sm text-[var(--cds-support-warning)]">
+        Your browser blocks the connection to the DotStories app. Click the icon left of the address → Site settings →
+        allow “Apps on device” (or “Local network access”), then reload.
+      </span>
+    );
+  if (runner.state === "idle" || runner.state === "missing")
     return (
       <span className="text-sm text-[var(--cds-text-secondary)]">
+        {runner.state === "idle"
+          ? "Press Run: your browser asks to connect to the DotStories app on this computer, click Allow. No app? Run installs it, or "
+          : "No DotStories app found. Press Run to install it, or "}
         <Link className="cds--link" href="/download">
-          Get the free DotStories app
-        </Link>{" "}
-        to run this on your computer.
+          get the free DotStories app
+        </Link>
+        .
       </span>
     );
 

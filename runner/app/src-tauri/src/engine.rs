@@ -61,18 +61,31 @@ fn copy_dir(from: &Path, to: &Path) -> io::Result<()> {
     Ok(())
 }
 
-/// `uv run ... dotstories-engine serve`, with everything kept inside the app data folder.
+/// Step 1, first start: `uv sync` installs Python and the AI libraries. Its output is the live setup log.
+pub fn sync_command(p: &Paths) -> Command {
+    let mut cmd = uv(p);
+    cmd.args(["sync", "--frozen", "--extra", "ml", "--python", "3.12"]);
+    cmd
+}
+
+/// Step 2: `uv run ... dotstories-engine serve`, with everything kept inside the app data folder.
 pub fn command(p: &Paths, parent_pid: u32) -> Command {
+    let mut cmd = uv(p);
+    cmd.args(["run", "--frozen", "--extra", "ml", "--python", "3.12", "dotstories-engine", "serve"])
+        .env("DOTSTORIES_PARENT_PID", parent_pid.to_string());
+    cmd
+}
+
+fn uv(p: &Paths) -> Command {
     let mut cmd = Command::new(p.uv());
     cmd.current_dir(p.engine())
-        .args(["run", "--frozen", "--extra", "ml", "--python", "3.12", "dotstories-engine", "serve"])
         .env("UV_PYTHON_PREFERENCE", "only-managed") // never touch the user's own Python
         .env("UV_PYTHON_INSTALL_DIR", p.data.join("python"))
         .env("UV_CACHE_DIR", p.data.join("uv-cache"))
         .env("UV_PROJECT_ENVIRONMENT", p.data.join("venv"))
         .env("DOTSTORIES_HOME", p.data.join("home"))
-        .env("DOTSTORIES_PARENT_PID", parent_pid.to_string())
-        .env("PYTHONUNBUFFERED", "1");
+        .env("PYTHONUNBUFFERED", "1")
+        .env("NO_COLOR", "1"); // plain lines for the log
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -182,6 +195,20 @@ mod tests {
         assert_eq!(env("UV_PYTHON_PREFERENCE"), "only-managed");
         assert_eq!(env("DOTSTORIES_PARENT_PID"), "42");
         assert_eq!(cmd.get_program(), p.uv().as_os_str());
+    }
+
+    #[test]
+    fn sync_installs_into_the_data_folder_first() {
+        let root = temp("sync");
+        let p = paths(&root);
+        let cmd = sync_command(&p);
+        let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
+        assert_eq!(args[..2], ["sync".to_string(), "--frozen".to_string()]);
+        assert!(args.contains(&"ml".to_string()));
+        let env = |k: &str| cmd.get_envs().find(|(key, _)| *key == k).and_then(|(_, v)| v).map(|v| v.to_owned());
+        assert!(env("UV_PROJECT_ENVIRONMENT").unwrap().to_string_lossy().starts_with(&*p.data.to_string_lossy()));
+        assert_eq!(env("UV_PYTHON_PREFERENCE").unwrap(), "only-managed");
+        assert!(env("DOTSTORIES_PARENT_PID").is_none());
     }
 
     #[test]
