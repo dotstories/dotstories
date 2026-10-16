@@ -87,6 +87,15 @@ def first_run_line(r, gb: float) -> str:
     return f"First run: downloading ~{gb:.0f} GB from Hugging Face, then loading it"
 
 
+def files_to_get(r, fetch) -> list:
+    """The model files that may download (for per-file lines in the log)."""
+    if r.snapshot:
+        return []
+    from .krea import MODEL
+
+    return [f for f in fetch(MODEL) if not (r.transformer and f.component == "transformer")]
+
+
 def model_runner():
     """Runs jobs for the local API. Keeps the model loaded between runs."""
     cache = {}
@@ -97,7 +106,7 @@ def model_runner():
 
         from .access import use_token
         from .krea import MODEL
-        from .progress import download_monitor
+        from .progress import components_line, download_monitor, fetch_repo_files
 
         status = info()
         plan = status["plan"]
@@ -106,10 +115,13 @@ def model_runner():
             emit({"event": "loading", "message": f"Getting {MODEL} ready ({status['hardware']['name']}, plan {plan})"})
             emit({"event": "log", "message": first_run_line(reuse(), gb)})
             use_token()  # gated models (Krea 2) download with the person's own token
+            files = files_to_get(reuse(), fetch_repo_files)
+            if line := components_line(files):
+                emit({"event": "log", "message": line})
             cache.clear()
             t0 = time.monotonic()
             folder = Path(os.environ["HF_HOME"]) / "hub" / f"models--{MODEL.replace('/', '--')}"
-            with download_monitor(emit, folder, gb):
+            with download_monitor(emit, folder, gb, files=files):
                 cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
             emit({"event": "log", "message": f"Model ready in {clock(time.monotonic() - t0)}"})
         with locked():  # no network, no new processes while the dot runs
