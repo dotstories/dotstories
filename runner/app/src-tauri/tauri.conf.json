@@ -19,6 +19,6 @@
       "../../engine/src/": "engine/src/"
     },
     "shortDescription": "Runs DotStories dots on your computer",
-    "windows": { "nsis": { "installMode": "currentUser" } }
+    "windows": { "nsis": { "installMode": "currentUser", "installerHooks": "windows/hooks.nsh" } }
   }
 }
