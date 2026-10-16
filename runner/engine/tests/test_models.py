@@ -39,9 +39,19 @@ def snapshot(root, repo="krea/Krea-2-Turbo", complete=True):
 
 def test_hf_cache_locations_follow_hf_env_vars(tmp_path):
     home = tmp_path / "home"
-    assert hf_cache_dirs({}, home) == [home / ".cache" / "huggingface" / "hub"]
-    assert hf_cache_dirs({"HF_HOME": "/x"}, home)[0].as_posix() == "/x/hub"
-    assert hf_cache_dirs({"HF_HUB_CACHE": "/y"}, home)[0].as_posix() == "/y"
+    default = home / ".cache" / "huggingface" / "hub"
+    assert hf_cache_dirs({}, home) == [default]
+    assert [d.as_posix() for d in hf_cache_dirs({"HF_HOME": "/x"}, home)] == ["/x/hub", default.as_posix()]
+    assert [d.as_posix() for d in hf_cache_dirs({"HF_HUB_CACHE": "/y", "HF_HOME": "/x"}, home)] == [
+        "/y", "/x/hub", default.as_posix()]
+
+
+def test_default_hf_cache_is_checked_even_when_the_app_sets_its_own(tmp_path):
+    """The app points HF_HOME at its own folder: the person's normal cache still counts."""
+    home = tmp_path / "home"
+    snap = snapshot(home / ".cache" / "huggingface" / "hub")
+    r = scan({"HF_HOME": str(tmp_path / "app-models")}, home, running=None)
+    assert r.snapshot == snap
 
 
 def test_complete_snapshot_is_found(tmp_path):
@@ -68,6 +78,28 @@ def test_comfyui_desktop_install_is_found(tmp_path):
     (base / "models" / "diffusion_models").mkdir(parents=True)
     dirs = comfy_model_dirs({"APPDATA": str(home / "AppData" / "Roaming")}, home, running=None)
     assert base / "models" / "diffusion_models" in dirs
+
+
+def test_comfy_desktop_shared_models_on_windows(tmp_path):
+    """Comfy Desktop keeps models in %LOCALAPPDATA%\\Comfy-Desktop\\ComfyUI-Shared."""
+    home = tmp_path / "home"
+    local = home / "AppData" / "Local"
+    shared = local / "Comfy-Desktop" / "ComfyUI-Shared" / "models" / "diffusion_models"
+    install = local / "Comfy-Desktop" / "ComfyUI-Installs" / "main" / "models" / "unet"
+    shared.mkdir(parents=True)
+    install.mkdir(parents=True)
+    dirs = comfy_model_dirs({"LOCALAPPDATA": str(local)}, home, running=None)
+    assert shared in dirs and install in dirs
+
+
+def test_comfy_desktop_shared_models_on_mac_and_linux(tmp_path):
+    home = tmp_path / "home"
+    shared = home / "ComfyUI-Shared" / "models" / "diffusion_models"
+    install = home / "ComfyUI-Installs" / "main" / "models" / "diffusion_models"
+    shared.mkdir(parents=True)
+    install.mkdir(parents=True)
+    dirs = comfy_model_dirs({}, home, running=None)
+    assert shared in dirs and install in dirs
 
 
 def test_comfyui_portable_and_extra_model_paths(tmp_path):
@@ -99,6 +131,21 @@ def test_finds_the_krea_file_and_prefers_bf16(tmp_path):
     assert find_comfy_file([d]).name == "krea2_turbo_bf16.safetensors"
 
 
+def test_finds_a_renamed_krea_file(tmp_path):
+    """Any name with "krea" counts: the header check proves it is Krea 2."""
+    d = tmp_path / "diffusion_models"
+    safetensors(d / "Krea2-Turbo-fp8.safetensors")
+    safetensors(d / "krea-old-not-2.safetensors", keys=("something.else",))
+    assert find_comfy_file([d]).name == "Krea2-Turbo-fp8.safetensors"
+
+
+def test_known_names_win_over_renamed_files(tmp_path):
+    d = tmp_path / "diffusion_models"
+    safetensors(d / "a_krea2_copy.safetensors")
+    safetensors(d / "krea2_turbo_fp8_scaled.safetensors")
+    assert find_comfy_file([d]).name == "krea2_turbo_fp8_scaled.safetensors"
+
+
 def test_ignores_a_file_that_is_not_krea(tmp_path):
     d = tmp_path / "diffusion_models"
     safetensors(d / "krea2_turbo_bf16.safetensors", keys=("something.else",))
@@ -122,6 +169,16 @@ def test_scan_uses_comfyui_transformer(tmp_path):
     assert r.snapshot is None and r.transformer.name == "krea2_turbo_bf16.safetensors"
     assert r.saved_gb == 26
     assert r.summary == "Found Krea 2 in ComfyUI · saves 26 GB"
+
+
+def test_scan_finds_the_comfy_desktop_file(tmp_path):
+    """The real setup that was missed: Comfy Desktop on Windows, fp8 file."""
+    home = tmp_path / "home"
+    local = home / "AppData" / "Local"
+    f = safetensors(local / "Comfy-Desktop" / "ComfyUI-Shared" / "models" / "diffusion_models"
+                    / "krea2_turbo_fp8_scaled.safetensors", keys=("txtfusion.projector.weight",))
+    r = scan({"LOCALAPPDATA": str(local), "HF_HOME": str(tmp_path / "app-models")}, home, running=None)
+    assert r.transformer == f
 
 
 def test_nothing_found(tmp_path):

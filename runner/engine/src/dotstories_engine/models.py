@@ -1,8 +1,8 @@
 """Reuse models the user already has, so nothing is downloaded twice.
 
 Looks in (read-only, never changes these folders):
-- the Hugging Face cache (a complete Krea 2 Turbo download)
-- ComfyUI: a running ComfyUI, ComfyUI Desktop, portable installs, extra_model_paths.yaml
+- the Hugging Face cache (a complete Krea 2 Turbo download): ours and the person's default one
+- ComfyUI: a running ComfyUI, Comfy Desktop (old and new), portable installs, extra_model_paths.yaml
 """
 import json
 import os
@@ -17,6 +17,7 @@ KREA_TURBO = "krea/Krea-2-Turbo"
 TRANSFORMER_GB = 26  # Krea 2 Turbo in bf16
 SNAPSHOT_GB = 34  # transformer + text encoder + VAE
 COMFY_FILES = ["krea2_turbo_bf16.safetensors", "krea2_turbo_fp8_scaled.safetensors"]  # preferred first
+COMFY_DESKTOP = "Comfy-Desktop"  # new Comfy Desktop: <LOCALAPPDATA or drive>/Comfy-Desktop/ComfyUI-{Shared,Installs}
 COMFY_FOLDERS = ["diffusion_models", "unet"]  # ComfyUI folder names for this model type
 KREA_KEYS = ("txtfusion.projector.weight", "model.diffusion_model.txtfusion.projector.weight")
 COMFY_PORTS = [8000, 8188]  # Desktop, portable
@@ -48,11 +49,15 @@ class Reuse:
 # ---------- Hugging Face ----------
 
 def hf_cache_dirs(env, home: Path) -> list[Path]:
+    """Env vars first, then the default cache: the app sets its own HF_HOME,
+    but the person may already have the model in their normal Hugging Face cache."""
+    dirs = []
     if env.get("HF_HUB_CACHE"):
-        return [Path(env["HF_HUB_CACHE"])]
+        dirs.append(Path(env["HF_HUB_CACHE"]))
     if env.get("HF_HOME"):
-        return [Path(env["HF_HOME"]) / "hub"]
-    return [home / ".cache" / "huggingface" / "hub"]
+        dirs.append(Path(env["HF_HOME"]) / "hub")
+    dirs.append(home / ".cache" / "huggingface" / "hub")
+    return list(dict.fromkeys(dirs))
 
 
 def _complete(snap: Path) -> bool:
@@ -100,6 +105,14 @@ def _comfy_roots(env, home: Path) -> list[Path]:
         try:
             roots.append(Path(json.loads(config.read_text())["basePath"]))
         except (OSError, ValueError, KeyError):
+            pass
+    # New Comfy Desktop: shared models + one folder per install.
+    local = Path(env.get("LOCALAPPDATA", home / "AppData" / "Local"))
+    for base in [local / COMFY_DESKTOP, home, Path("C:/") / COMFY_DESKTOP, Path("D:/") / COMFY_DESKTOP]:
+        roots.append(base / "ComfyUI-Shared")
+        try:
+            roots += [d for d in (base / "ComfyUI-Installs").iterdir() if d.is_dir()]
+        except OSError:
             pass
     # Common places for manual and portable installs.
     for parent in [home, home / "Documents", home / "Desktop", home / "Downloads", Path("C:/"), Path("D:/")]:
@@ -160,12 +173,18 @@ def _is_krea(path: Path) -> bool:
         return False
 
 
+def _renamed(d: Path) -> list[Path]:
+    """A renamed copy: "krea" in the name is enough to look, the header check decides."""
+    try:
+        return sorted(f for f in d.glob("*.safetensors") if "krea" in f.name.lower() and f.name not in COMFY_FILES)
+    except OSError:
+        return []
+
+
 def find_comfy_file(model_dirs: list[Path]) -> Path | None:
-    for name in COMFY_FILES:
-        for d in model_dirs:
-            if (d / name).is_file() and _is_krea(d / name):
-                return d / name
-    return None
+    known = [d / name for name in COMFY_FILES for d in model_dirs]  # known names first, bf16 preferred
+    renamed = [f for d in model_dirs for f in _renamed(d)]
+    return next((f for f in known + renamed if f.is_file() and _is_krea(f)), None)
 
 
 # ---------- all together ----------
