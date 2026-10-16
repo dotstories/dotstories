@@ -15,6 +15,11 @@ it("the sitemap lists the home page, the catalog, every dot and the blog", () =>
   );
 });
 
+it("the sitemap lists the legal pages and the Code of Conduct", () => {
+  const urls = sitemap().map((e) => e.url);
+  for (const path of ["/terms", "/privacy", "/cookies", "/code-of-conduct"]) expect(urls).toContain(`https://dotstories.com${path}`);
+});
+
 it("robots: crawl the site, not the API or private pages; point to both sitemaps", () => {
   const r = robots();
   expect(r.rules).toMatchObject({ userAgent: "*", allow: "/", disallow: expect.arrayContaining(["/api/", "/profile"]) });

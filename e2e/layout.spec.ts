@@ -41,6 +41,7 @@ test("footer: legal pages open and show who runs DotStories", async ({ page }) =
     ["Terms", "Terms of Service"],
     ["Privacy", "Privacy Policy"],
     ["Cookies", "Cookie Policy"],
+    ["Code of Conduct", "Code of Conduct"],
   ]) {
     await page.goto("/");
     await page.getByRole("contentinfo").getByRole("link", { name: link, exact: true }).click();
