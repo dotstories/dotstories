@@ -54,6 +54,7 @@ describe("Footer", () => {
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
     expect(screen.getByRole("link", { name: "Cookies" })).toHaveAttribute("href", "/cookies");
+    expect(screen.getByRole("link", { name: "Code of Conduct" })).toHaveAttribute("href", "/code-of-conduct");
   });
 
   it("shows who runs the site", () => {

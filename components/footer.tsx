@@ -51,6 +51,9 @@ export default function Footer() {
               <Link className="cds--link" href="/cookies">
                 Cookies
               </Link>
+              <Link className="cds--link" href="/code-of-conduct">
+                Code of Conduct
+              </Link>
             </nav>
           </div>
         </div>

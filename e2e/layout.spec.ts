@@ -41,11 +41,20 @@ test("footer: legal pages open and show who runs DotStories", async ({ page }) =
     ["Terms", "Terms of Service"],
     ["Privacy", "Privacy Policy"],
     ["Cookies", "Cookie Policy"],
+    ["Code of Conduct", "Code of Conduct"],
   ]) {
     await page.goto("/");
     await page.getByRole("contentinfo").getByRole("link", { name: link, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   }
+});
+
+test("terms: each model links to its key points", async ({ page }) => {
+  await page.goto("/terms");
+  await page.getByRole("main").getByRole("link", { name: "Stable Audio 3", exact: true }).click();
+  await expect(page).toHaveURL(/\/models\/stable-audio-3$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Stable Audio 3" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Training data" })).toBeVisible();
 });
 
 test("sign up says 16+ and links the terms", async ({ page }) => {
