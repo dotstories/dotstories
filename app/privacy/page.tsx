@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage from "@/components/legal";
-import { OPERATOR } from "@/lib/operator";
+import { OPERATOR, OPERATOR_FULL } from "@/lib/operator";
 
 export const metadata: Metadata = {
   title: "Privacy Policy · DotStories",
@@ -24,7 +24,7 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy">
       <p>
-        DotStories is a community, and trust is what it runs on. {OPERATOR.name} (&quot;we&quot;) runs the site for the community
+        DotStories is a community, and trust is what it runs on. {OPERATOR.person} ({OPERATOR.name}, &quot;we&quot;) runs the site for the community
         and is responsible (&quot;controller&quot;) for the personal data described here. We collect as little as possible, never
         sell it and never use it for advertising.
       </p>

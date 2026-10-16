@@ -58,7 +58,7 @@ export default function Footer() {
           </div>
         </div>
         <p className="text-center text-xs text-[var(--cds-text-secondary)]">
-          © {new Date().getFullYear()} {OPERATOR.name}
+          © {new Date().getFullYear()} DotStories
         </p>
       </div>
     </footer>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage from "@/components/legal";
-import { OPERATOR } from "@/lib/operator";
+import { OPERATOR, OPERATOR_FULL } from "@/lib/operator";
 import { MODELS } from "@/lib/models";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default function Terms() {
       <p>
         DotStories is an open source community where people share AI workflows (&quot;dots&quot;) and run them on their own
         computer. These terms apply to dotstories.com, blog.dotstories.com and the DotStories app (together: DotStories). The
-        site is run for the community by {OPERATOR.name} (&quot;we&quot;, &quot;us&quot;). By using DotStories you accept these
+        site is run for the community by {OPERATOR_FULL} (&quot;we&quot;, &quot;us&quot;). By using DotStories you accept these
         terms. If you don&apos;t agree, please don&apos;t use DotStories.
       </p>
 

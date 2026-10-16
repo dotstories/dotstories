@@ -57,7 +57,7 @@ describe("Footer", () => {
     expect(screen.getByRole("link", { name: "Code of Conduct" })).toHaveAttribute("href", "/code-of-conduct");
   });
 
-  it("shows who runs the site", () => {
+  it("shows DotStories as the name", () => {
     render(<Footer />);
     expect(screen.getByText(/^© \d{4} DotStories$/)).toBeInTheDocument();
   });

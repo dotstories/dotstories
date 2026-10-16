@@ -18,6 +18,7 @@ describe.each([
     render(<Page />);
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
+    expect(screen.getByText(/DotStories is an open-source community project/)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "info@dotstories.com" }).length).toBeGreaterThan(0);
   });
 });
@@ -79,6 +80,11 @@ describe("Terms", () => {
     expect(text()).toMatch(/not a waiver/i);
   });
 
+  it("names the person who runs DotStories (a contract needs a party)", () => {
+    render(<Terms />);
+    expect(text()).toMatch(/Dayonel \(Nestor Plysyuk\)/);
+  });
+
   it("16+, reporting, Dutch law", () => {
     render(<Terms />);
     expect(text()).toMatch(/at least 16 years old/);
@@ -87,8 +93,9 @@ describe("Terms", () => {
   });
 });
 
-it("privacy: the Hugging Face token stays on your computer; Dutch authority", () => {
+it("privacy: the Hugging Face token stays on your computer; Dutch authority; who the controller is", () => {
   render(<Privacy />);
+  expect(document.body.textContent).toMatch(/Nestor Plysyuk \(Dayonel, "we"\) runs the site.*controller/);
   expect(document.body.textContent).toMatch(/Hugging Face token stays on your computer/i);
   expect(screen.getByRole("link", { name: "Autoriteit Persoonsgegevens" })).toHaveAttribute("href", "https://autoriteitpersoonsgegevens.nl");
 });

@@ -11,9 +11,8 @@ export default function LegalPage({ title, children }: { title: string; children
         {children}
         <h2>Contact</h2>
         <p>
-          {OPERATOR.name}
-          <br />
-          Email: <a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>
+          DotStories is an open-source community project. Email:{" "}
+          <a href={`mailto:${OPERATOR.email}`}>{OPERATOR.email}</a>
         </p>
         <p className="legal-also">
           See also: <Link href="/terms">Terms</Link> · <Link href="/privacy">Privacy</Link> ·{" "}
