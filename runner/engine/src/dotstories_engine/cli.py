@@ -77,6 +77,16 @@ def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     emit({"event": "done", "path": str(path), "seed": job.seed, "seconds": round(time.monotonic() - t1, 1)})
 
 
+def first_run_line(r, gb: float) -> str:
+    """What the first load does: reuse, download, or both."""
+    if r.snapshot:
+        return "Model found on this computer: loading it into memory"
+    if r.transformer:
+        return (f"Reusing your ComfyUI file {r.transformer.name}. Still downloading the text encoder + VAE "
+                f"(~{gb:.0f} GB) from Hugging Face, then loading it")
+    return f"First run: downloading ~{gb:.0f} GB from Hugging Face, then loading it"
+
+
 def model_runner():
     """Runs jobs for the local API. Keeps the model loaded between runs."""
     cache = {}
@@ -94,8 +104,7 @@ def model_runner():
         if plan not in cache:
             gb = status["estimate"]["download_gb"]
             emit({"event": "loading", "message": f"Getting {MODEL} ready ({status['hardware']['name']}, plan {plan})"})
-            emit({"event": "log", "message": f"First run: downloading ~{gb:.0f} GB from Hugging Face, then loading it"
-                                             if gb else "Model found on this computer: loading it into memory"})
+            emit({"event": "log", "message": first_run_line(reuse(), gb)})
             use_token()  # gated models (Krea 2) download with the person's own token
             cache.clear()
             t0 = time.monotonic()
