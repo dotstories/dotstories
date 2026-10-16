@@ -8,6 +8,20 @@ use std::process::Command;
 
 pub const SITE: &str = "https://dotstories.com";
 
+/// The data folder moved (Roaming → Local on Windows: it holds GBs, Roaming is for small settings
+/// that sync). Move an existing one over once: instant on the same drive, nothing downloads again.
+/// Returns true if it moved.
+pub fn move_data(old: &Path, new: &Path) -> io::Result<bool> {
+    if old == new || !old.is_dir() || new.exists() {
+        return Ok(false);
+    }
+    if let Some(parent) = new.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::rename(old, new)?;
+    Ok(true)
+}
+
 /// Where things live.
 pub struct Paths {
     /// App data folder: Python, libraries, models, outputs. Writable.
@@ -61,18 +75,31 @@ fn copy_dir(from: &Path, to: &Path) -> io::Result<()> {
     Ok(())
 }
 
-/// `uv run ... dotstories-engine serve`, with everything kept inside the app data folder.
+/// Step 1, first start: `uv sync` installs Python and the AI libraries. Its output is the live setup log.
+pub fn sync_command(p: &Paths) -> Command {
+    let mut cmd = uv(p);
+    cmd.args(["sync", "--frozen", "--extra", "ml", "--python", "3.12"]);
+    cmd
+}
+
+/// Step 2: `uv run ... dotstories-engine serve`, with everything kept inside the app data folder.
 pub fn command(p: &Paths, parent_pid: u32) -> Command {
+    let mut cmd = uv(p);
+    cmd.args(["run", "--frozen", "--extra", "ml", "--python", "3.12", "dotstories-engine", "serve"])
+        .env("DOTSTORIES_PARENT_PID", parent_pid.to_string());
+    cmd
+}
+
+fn uv(p: &Paths) -> Command {
     let mut cmd = Command::new(p.uv());
     cmd.current_dir(p.engine())
-        .args(["run", "--frozen", "--extra", "ml", "--python", "3.12", "dotstories-engine", "serve"])
         .env("UV_PYTHON_PREFERENCE", "only-managed") // never touch the user's own Python
         .env("UV_PYTHON_INSTALL_DIR", p.data.join("python"))
         .env("UV_CACHE_DIR", p.data.join("uv-cache"))
         .env("UV_PROJECT_ENVIRONMENT", p.data.join("venv"))
         .env("DOTSTORIES_HOME", p.data.join("home"))
-        .env("DOTSTORIES_PARENT_PID", parent_pid.to_string())
-        .env("PYTHONUNBUFFERED", "1");
+        .env("PYTHONUNBUFFERED", "1")
+        .env("NO_COLOR", "1"); // plain lines for the log
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -185,6 +212,20 @@ mod tests {
     }
 
     #[test]
+    fn sync_installs_into_the_data_folder_first() {
+        let root = temp("sync");
+        let p = paths(&root);
+        let cmd = sync_command(&p);
+        let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().to_string()).collect();
+        assert_eq!(args[..2], ["sync".to_string(), "--frozen".to_string()]);
+        assert!(args.contains(&"ml".to_string()));
+        let env = |k: &str| cmd.get_envs().find(|(key, _)| *key == k).and_then(|(_, v)| v).map(|v| v.to_owned());
+        assert!(env("UV_PROJECT_ENVIRONMENT").unwrap().to_string_lossy().starts_with(&*p.data.to_string_lossy()));
+        assert_eq!(env("UV_PYTHON_PREFERENCE").unwrap(), "only-managed");
+        assert!(env("DOTSTORIES_PARENT_PID").is_none());
+    }
+
+    #[test]
     fn prepare_copies_the_engine_once_per_version() {
         let root = temp("prep");
         let p = paths(&root);
@@ -199,5 +240,24 @@ mod tests {
         fs::write(p.engine_src().join("src/pkg/a.py"), "print(2)").unwrap();
         assert!(prepare(&p, "0.2.0").unwrap()); // new app version: fresh copy
         assert_eq!(fs::read_to_string(p.engine().join("src/pkg/a.py")).unwrap(), "print(2)");
+    }
+
+    #[test]
+    fn moves_old_data_once() {
+        let root = std::env::temp_dir().join(format!("ds-move-{}", std::process::id()));
+        let (old, new) = (root.join("Roaming/app"), root.join("Local/app"));
+        fs::create_dir_all(old.join("home/models")).unwrap();
+        fs::write(old.join("home/models/part"), b"x").unwrap();
+
+        assert!(move_data(&old, &new).unwrap());
+        assert!(new.join("home/models/part").is_file());
+        assert!(!old.exists());
+        assert!(!move_data(&old, &new).unwrap()); // nothing left to move
+
+        fs::create_dir_all(&old).unwrap(); // both exist: keep the new one, touch nothing
+        assert!(!move_data(&old, &new).unwrap());
+        assert!(old.is_dir() && new.join("home/models/part").is_file());
+        assert!(!move_data(&new, &new).unwrap());
+        fs::remove_dir_all(&root).unwrap();
     }
 }

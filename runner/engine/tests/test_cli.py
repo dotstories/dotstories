@@ -30,3 +30,28 @@ def test_stops_when_the_app_is_gone():
     t = cli.watch_parent(123, alive=lambda pid: next(checks), stop=stopped.set, interval=0.01)
     t.join(2)
     assert stopped.is_set()
+
+
+def test_first_run_line_says_what_is_reused_and_what_still_downloads():
+    from pathlib import Path
+
+    from dotstories_engine.models import Reuse
+
+    comfy = cli.first_run_line(Reuse(transformer=Path("C:/m/krea2_turbo_fp8_scaled.safetensors")), 10)
+    assert "krea2_turbo_fp8_scaled.safetensors" in comfy
+    assert "text encoder + VAE" in comfy and "~10 GB" in comfy
+    assert cli.first_run_line(Reuse(snapshot=Path("/hf/snap")), 2) == "Model found on this computer: loading it into memory"
+    assert cli.first_run_line(Reuse(), 36) == "First run: downloading ~36 GB from Hugging Face, then loading it"
+
+
+def test_files_to_get_skips_what_is_reused():
+    from pathlib import Path
+
+    from dotstories_engine.models import Reuse
+    from dotstories_engine.progress import RepoFile
+
+    files = [RepoFile("transformer/a.safetensors", 1, "a"), RepoFile("vae/b.safetensors", 1, "b")]
+    fetch = lambda model: files  # noqa: E731
+    assert cli.files_to_get(Reuse(), fetch) == files
+    assert cli.files_to_get(Reuse(transformer=Path("k.safetensors")), fetch) == files[1:]
+    assert cli.files_to_get(Reuse(snapshot=Path("/snap")), lambda m: 1 / 0) == []  # nothing to download: no network

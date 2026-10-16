@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Comments from "@/components/comments";
 import DotRunner from "@/components/dot-runner";
 import ViewPing from "@/components/view-ping";
+import { acceptedTerms } from "@/lib/accepted-terms";
 import { latest } from "@/lib/dot";
 import { parseState, toQuery } from "@/lib/dot-state";
 import { dots, findDot } from "@/lib/dots";
@@ -51,10 +52,11 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
   const search = await searchParams;
   const initial = parseState(dot, search); // the URL has the visitor's setup
   const session = await sessionWithSetup(dot, `/dots/${dot.slug}`, search);
-  const [stats, liked, comments] = await Promise.all([
+  const [stats, liked, comments, accepted] = await Promise.all([
     getStats(dot.slug),
     likedBy(session?.user.id, dot.slug),
     commentsFor(dot.slug),
+    session ? acceptedTerms(session.user.id) : [],
   ]);
   const link = (href: string, text: string) => (
     <a className="cds--link !text-xs" href={href} target="_blank" rel="noreferrer">
@@ -96,6 +98,7 @@ export default async function DotPage({ params, searchParams }: PageProps<"/dots
         stats={stats}
         liked={liked}
         loggedIn={!!session}
+        acceptedTerms={accepted}
       />
 
       <Comments slug={dot.slug} comments={comments} me={session ? { id: session.user.id } : null} />

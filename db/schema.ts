@@ -122,6 +122,20 @@ export const dotState = sqliteTable(
   (t) => [primaryKey({ columns: [t.userId, t.slug] })],
 );
 
+export const modelTerms = sqliteTable(
+  "model_terms",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    terms: text("terms").notNull(),
+    acceptedAt: integer("acceptedAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.terms] })],
+);
+
 /** Emails, usernames and social logins of deleted accounts, as hashes only (lib/retired-hash.ts). */
 export const retired = sqliteTable("retired", {
   hash: text("hash").primaryKey(),

@@ -30,3 +30,20 @@ export const releaseExists = () =>
   ));
 
 export const resetReleaseCheck = () => (checked = null); // tests
+
+/** Start downloading the installer for this computer. The page stays open: it's a file, not a page. */
+export function downloadInstaller(os: "windows" | "mac") {
+  const a = document.createElement("a");
+  a.href = DOWNLOADS[os];
+  a.rel = "noopener";
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+/** The installer for this browser's computer, if there is one and it's released. */
+export async function installerFor(userAgent: string): Promise<"windows" | "mac" | null> {
+  const os = detectOS(userAgent);
+  if (os !== "windows" && os !== "mac") return null;
+  return (await releaseExists()) ? os : null;
+}

@@ -3,23 +3,46 @@
 import { PlayFilledAlt } from "@carbon/icons-react";
 import { Button, InlineLoading, InlineNotification, NumberInput, ProgressBar, TextArea } from "@carbon/react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
+import { downloadInstaller, installerFor } from "@/lib/download";
 import type { DotState } from "@/lib/dot-state";
+import { type Model, modelFor } from "@/lib/models";
+import { useModelTerms } from "@/lib/use-model-terms";
 import { isRunning, useRunStore } from "@/store/run";
+import InstallApp from "./install-app";
+import ModelAccess from "./model-access";
+import ModelTerms from "./model-terms";
+import SetupLog from "./setup-log";
 
-type Props = { dot: ImageDot; version: string; inputs: Inputs; onChange: (patch: DotState) => void };
+type Props = {
+  dot: ImageDot;
+  version: string;
+  inputs: Inputs;
+  onChange: (patch: DotState) => void;
+  loggedIn?: boolean;
+  acceptedTerms?: string[]; // logged in: model terms accepted before (D1)
+};
 
-export default function Demo({ dot, version, inputs, onChange }: Props) {
+export default function Demo({ dot, version, inputs, onChange, loggedIn = false, acceptedTerms }: Props) {
   const v = findVersion(dot, version) ?? latest(dot);
   const { prompt, seed } = inputs;
-  const { runner, job, image, error, shading, checkRunner, run } = useRunStore();
+  const { runner, job, image, shading, init, start } = useRunStore();
+  const model = modelFor(dot);
   const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
   useEffect(() => {
-    checkRunner();
-  }, [checkRunner]);
+    init();
+  }, [init]);
+
+  // Run: runs now, or finds the app (the browser may ask to allow it), or installs it first.
+  const run = () =>
+    start(inputs, v.postSteps, () => {
+      installerFor(navigator.userAgent).then((os) => os && downloadInstaller(os));
+    });
+  // The first run on a model asks to accept its terms.
+  const { onRun, dialog } = useTermsGate(model, run, loggedIn, acceptedTerms);
 
   return (
     <section aria-label="Try a dot" className="flex flex-col gap-6">
@@ -50,15 +73,16 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
           />
           <Button
             renderIcon={PlayFilledAlt}
-            disabled={runner.state !== "ready" || running || !prompt.trim()}
-            onClick={() => run(inputs, v.postSteps)}
+            disabled={running || !prompt.trim() || runner.state === "checking" || runner.state === "blocked"}
+            onClick={onRun}
           >
             Run
           </Button>
           <Status />
         </div>
-        {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
+        <Panels model={model} />
       </div>
+      {dialog}
 
       <p className="text-sm text-[var(--cds-text-secondary)] md:hidden">
         Running a dot needs a desktop computer. You can browse dots here.
@@ -82,12 +106,53 @@ export default function Demo({ dot, version, inputs, onChange }: Props) {
   );
 }
 
+/** The first run on a model opens its terms; Run continues once they're accepted. */
+function useTermsGate(model: Model | undefined, run: () => void, loggedIn: boolean, fromServer?: string[]) {
+  const [accepted, accept] = useModelTerms(model, loggedIn, fromServer);
+  const [asking, setAsking] = useState(false);
+  const onRun = () => (accepted ? run() : setAsking(true));
+  const dialog =
+    model && asking ? (
+      <ModelTerms
+        model={model}
+        open
+        onClose={() => setAsking(false)}
+        onAccept={() => {
+          accept();
+          setAsking(false);
+          run();
+        }}
+      />
+    ) : null;
+  return { onRun, dialog };
+}
+
+/** Under the Run button: errors, model access steps, installing the app, and the app's live log. */
+function Panels({ model }: { model: Model | undefined }) {
+  const { runner, error, installing, access, showLog } = useRunStore();
+  return (
+    <>
+      {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
+      {model && access && <ModelAccess model={model} access={access} />}
+      {installing ? <InstallApp /> : (runner.state === "setup" || showLog) && <RunLog />}
+    </>
+  );
+}
+
+/** One log for everything the app does after Run: its setup, then this run (download, loading, steps). */
+function RunLog() {
+  const { runner, logs, jobLogs, job } = useRunStore();
+  const lines = [...logs.map((l) => ({ ...l, id: `s${l.n}` })), ...jobLogs.map((l) => ({ ...l, id: `j${l.n}` }))];
+  const status = runner.state === "setup" ? runner.setup.message : (job?.message ?? (runner.state === "ready" ? "Ready" : "Waiting for the app"));
+  return <SetupLog lines={lines} title="DotStories app · log" status={status} />;
+}
+
 function Status() {
-  const { runner, job, shading } = useRunStore();
+  const { runner, job, shading, installing } = useRunStore();
 
   if (shading) return <InlineLoading description="Adding title and effects in your browser…" />;
   if (job?.status === "loading" || job?.status === "queued")
-    return <InlineLoading description="Loading the model (first run downloads it)…" />;
+    return <InlineLoading description="Getting the model ready (first run downloads it) · see the log below" />;
   if (job?.status === "running" && job.progress) {
     const { step, steps, eta } = job.progress;
     return (
@@ -101,13 +166,25 @@ function Status() {
     );
   }
   if (runner.state === "checking") return <InlineLoading description="Looking for the DotStories app…" />;
-  if (runner.state === "missing")
+  if (installing && runner.state === "missing") return <InlineLoading description="Waiting for the DotStories app to start…" />;
+  if (runner.state === "setup") return <InlineLoading description={runner.setup.message} />;
+  if (runner.state === "blocked")
+    return (
+      <span className="text-sm text-[var(--cds-support-warning)]">
+        Your browser blocks the connection to the DotStories app. Click the icon left of the address → Site settings →
+        allow “Apps on device” (or “Local network access”), then reload.
+      </span>
+    );
+  if (runner.state === "idle" || runner.state === "missing")
     return (
       <span className="text-sm text-[var(--cds-text-secondary)]">
+        {runner.state === "idle"
+          ? "Press Run: your browser asks to connect to the DotStories app on this computer, click Allow. No app? Run installs it, or "
+          : "No DotStories app found. Press Run to install it, or "}
         <Link className="cds--link" href="/download">
-          Get the free DotStories app
-        </Link>{" "}
-        to run this on your computer.
+          get the free DotStories app
+        </Link>
+        .
       </span>
     );
 

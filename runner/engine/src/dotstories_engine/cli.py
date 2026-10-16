@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from .estimate import estimate
+from .progress import clock
 from .hardware import detect, tier
 from .plan import memory_plan
 
@@ -52,6 +53,9 @@ def info() -> dict:
 def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))  # all downloads in one place
     start_sandbox()
+    from .access import use_token
+
+    use_token()
     from .krea import generate, load_job, load_pipeline, make_generator
     from .sandbox import locked
 
@@ -73,6 +77,25 @@ def run_generate(dot: Path, out: Path, seed: int | None, plan: str | None):
     emit({"event": "done", "path": str(path), "seed": job.seed, "seconds": round(time.monotonic() - t1, 1)})
 
 
+def first_run_line(r, gb: float) -> str:
+    """What the first load does: reuse, download, or both."""
+    if r.snapshot:
+        return "Model found on this computer: loading it into memory"
+    if r.transformer:
+        return (f"Reusing your ComfyUI file {r.transformer.name}. Still downloading the text encoder + VAE "
+                f"(~{gb:.0f} GB) from Hugging Face, then loading it")
+    return f"First run: downloading ~{gb:.0f} GB from Hugging Face, then loading it"
+
+
+def files_to_get(r, fetch) -> list:
+    """The model files that may download (for per-file lines in the log)."""
+    if r.snapshot:
+        return []
+    from .krea import MODEL
+
+    return [f for f in fetch(MODEL) if not (r.transformer and f.component == "transformer")]
+
+
 def model_runner():
     """Runs jobs for the local API. Keeps the model loaded between runs."""
     cache = {}
@@ -81,11 +104,26 @@ def model_runner():
         from .krea import generate, load_pipeline, make_generator
         from .sandbox import locked
 
-        plan = info()["plan"]
+        from .access import use_token
+        from .krea import MODEL
+        from .progress import components_line, download_monitor, fetch_repo_files
+
+        status = info()
+        plan = status["plan"]
         if plan not in cache:
-            emit({"event": "loading"})
+            gb = status["estimate"]["download_gb"]
+            emit({"event": "loading", "message": f"Getting {MODEL} ready ({status['hardware']['name']}, plan {plan})"})
+            emit({"event": "log", "message": first_run_line(reuse(), gb)})
+            use_token()  # gated models (Krea 2) download with the person's own token
+            files = files_to_get(reuse(), fetch_repo_files)
+            if line := components_line(files):
+                emit({"event": "log", "message": line})
             cache.clear()
-            cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
+            t0 = time.monotonic()
+            folder = Path(os.environ["HF_HOME"]) / "hub" / f"models--{MODEL.replace('/', '--')}"
+            with download_monitor(emit, folder, gb, files=files):
+                cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
+            emit({"event": "log", "message": f"Model ready in {clock(time.monotonic() - t0)}"})
         with locked():  # no network, no new processes while the dot runs
             generate(job, cache[plan], make_generator(job.seed), out, emit)
 
@@ -109,15 +147,24 @@ def watch_parent(pid: int, alive=None, stop=lambda: os._exit(0), interval: float
     return t
 
 
+def on_disk(model: str) -> bool:
+    """The complete model is on this computer (ours or Hugging Face's cache): no token needed.
+    A ComfyUI file alone isn't enough: the text encoder and VAE still come from Hugging Face."""
+    return bool(reuse().snapshot)
+
+
 def serve(port: int):
     os.environ.setdefault("HF_HOME", str(HOME / "models"))
     if parent := os.environ.get("DOTSTORIES_PARENT_PID"):
         watch_parent(int(parent))
     start_sandbox()
+    from functools import partial
+
+    from . import access
     from .server import make_server
 
     status = info()
-    srv = make_server(port, HOME / "output", model_runner(), info)
+    srv = make_server(port, HOME / "output", model_runner(), info, access=partial(access.access, on_disk=on_disk))
     emit({
         "event": "serving",
         "url": f"http://127.0.0.1:{srv.server_address[1]}",

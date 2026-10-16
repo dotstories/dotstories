@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import Demo from "../components/demo";
 import { latest } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
 import { useRunStore } from "../store/run";
+
+const TERMS = ["krea2-turbo@1.0"]; // accepted before (logged in, from D1)
 
 const INFO = {
   hardware: { device: "cuda", name: "RTX 4080", vram_gb: 16, ram_gb: 32 },
@@ -17,10 +19,32 @@ const INFO = {
   },
 };
 
-const show = (state: object) => {
-  useRunStore.setState({ job: null, image: null, error: null, shading: false, checkRunner: async () => {}, ...state });
+const show = (state: object, acceptedTerms: string[] = TERMS) => {
+  useRunStore.setState({
+    job: null,
+    image: null,
+    error: null,
+    shading: false,
+    installing: false,
+    logs: [],
+    jobLogs: [],
+    showLog: false,
+    access: null,
+    init: async () => {},
+    checkRunner: async () => {},
+    ...state,
+  });
   const v = latest(darkFantasy);
-  render(<Demo dot={darkFantasy} version={v.version} inputs={v.inputs} onChange={() => {}} />);
+  render(
+    <Demo
+      dot={darkFantasy}
+      version={v.version}
+      inputs={v.inputs}
+      onChange={() => {}}
+      loggedIn
+      acceptedTerms={acceptedTerms}
+    />,
+  );
 };
 
 describe("Demo", () => {
@@ -29,10 +53,42 @@ describe("Demo", () => {
     expect(screen.getByLabelText(/prompt/i)).toHaveValue(darkFantasy.versions[0].inputs.prompt);
   });
 
-  it("Run is disabled until the app is found", () => {
-    show({ runner: { state: "missing" } });
-    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  it("without the app, Run installs it (one click)", () => {
+    const start = jest.fn(async () => {});
+    show({ runner: { state: "missing" }, start });
+    expect(screen.getByText(/press run to install it/i)).toBeInTheDocument();
     expect(screen.getByText(/get the free dotstories app/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
+    expect(start).toHaveBeenCalledWith(latest(darkFantasy).inputs, latest(darkFantasy).postSteps, expect.any(Function));
+  });
+
+  it("before the browser asked: explains the Allow question, Run is enabled", () => {
+    show({ runner: { state: "idle" } });
+    expect(screen.getByText(/click allow/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  });
+
+  it("when the browser blocks the app: says how to allow it, Run is disabled", () => {
+    show({ runner: { state: "blocked" } });
+    expect(screen.getByText(/your browser blocks the connection/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  });
+
+  it("shows the app's setup log live", () => {
+    show({
+      runner: {
+        state: "setup",
+        setup: { phase: "installing", message: "Installing AI libraries…", version: "0.2.0", next: 2, lines: [] },
+      },
+      logs: [
+        { n: 0, t: 1, text: "Resolved 84 packages" },
+        { n: 1, t: 65, text: "Downloading torch (2.4 GiB)" },
+      ],
+    });
+    const log = screen.getByRole("log", { name: /setup log/i });
+    expect(log).toHaveTextContent("0:01Resolved 84 packages");
+    expect(log).toHaveTextContent("1:05Downloading torch (2.4 GiB)");
+    expect(screen.getAllByText("Installing AI libraries…").length).toBeGreaterThan(0);
   });
 
   it("shows hardware and time estimate when the app is found", () => {
@@ -67,7 +123,7 @@ describe("Demo", () => {
   });
 
   it("shows the license", () => {
-    show({ runner: { state: "missing" } });
+    show({ runner: { state: "ready", info: INFO } });
     expect(screen.getByText(/krea 2 community license/i)).toBeInTheDocument();
   });
 
@@ -75,5 +131,94 @@ describe("Demo", () => {
     show({ runner: { state: "ready", info: INFO }, shading: true });
     expect(screen.getByText(/adding title and effects in your browser/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
+  });
+
+  describe("model terms (first run on a model)", () => {
+    beforeEach(() => localStorage.clear());
+
+    it("asks to accept the terms first; Run waits for the checkbox", () => {
+      const start = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, start }, []);
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+
+      expect(screen.getByText(/krea 2 turbo · terms of use/i)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Krea 2 Community License" })).toHaveAttribute(
+        "href",
+        "https://www.krea.ai/krea-2-licensing",
+      );
+      expect(screen.getByRole("button", { name: "Accept and run" })).toBeDisabled();
+      expect(start).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: /i have read and agree/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Accept and run" }));
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(localStorage.getItem("dotstories:model-terms")!)).toEqual(["krea2-turbo@1.0"]);
+    });
+
+    it("cancel: nothing runs", () => {
+      const start = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, start }, []);
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it("accepted before in this browser: runs at once", () => {
+      localStorage.setItem("dotstories:model-terms", JSON.stringify(["krea2-turbo@1.0"]));
+      const start = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, start }, []);
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      expect(start).toHaveBeenCalledTimes(1);
+    });
+
+    it("older terms don't count: new version, ask again", () => {
+      localStorage.setItem("dotstories:model-terms", JSON.stringify(["krea2-turbo@0.9"]));
+      const start = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, start }, []);
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      expect(start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Hugging Face access", () => {
+    const access = (status: string) => ({ model: "krea/Krea-2-Turbo", status, url: "https://huggingface.co/krea/Krea-2-Turbo" });
+
+    it("explains the steps and saves the token to the app", () => {
+      const saveToken = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, access: access("no-token"), saveToken });
+      const card = screen.getByRole("region", { name: /get access to krea 2 turbo/i });
+      expect(card).toHaveTextContent(/never sent to dotstories\.com/i);
+      expect(screen.getByRole("link", { name: /krea 2 turbo page/i })).toHaveAttribute(
+        "href",
+        "https://huggingface.co/krea/Krea-2-Turbo",
+      );
+      fireEvent.change(screen.getByLabelText("Hugging Face token"), { target: { value: "hf_abc" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save to the app" }));
+      expect(saveToken).toHaveBeenCalledWith("hf_abc");
+    });
+
+    it("terms not accepted on Hugging Face yet: says so, Check again", () => {
+      const recheckAccess = jest.fn(async () => {});
+      show({ runner: { state: "ready", info: INFO }, access: access("not-accepted"), recheckAccess });
+      expect(screen.getByRole("status")).toHaveTextContent(/aren't accepted on this hugging face account/i);
+      fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+      expect(recheckAccess).toHaveBeenCalled();
+    });
+  });
+
+  it("after Run: one live log with what the app is doing, and the short status", () => {
+    show({
+      runner: { state: "ready", info: INFO },
+      showLog: true,
+      job: { id: "a", status: "loading", progress: null, error: null, message: "Downloading the model: 12.0 of ~34 GB" },
+      jobLogs: [
+        { n: 0, t: 0, text: "Starting" },
+        { n: 1, t: 5, text: "Downloading the model: 12.0 of ~34 GB" },
+      ],
+    });
+    const log = screen.getByRole("log", { name: /setup log/i });
+    expect(log).toHaveTextContent("0:00Starting");
+    expect(log).toHaveTextContent("0:05Downloading the model: 12.0 of ~34 GB");
+    expect(screen.getByText(/getting the model ready/i)).toBeInTheDocument();
   });
 });

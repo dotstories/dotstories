@@ -169,3 +169,59 @@ body {
 .legal-also {
   margin-top: 2rem;
 }
+
+/* The app's setup log, live, like build logs: new lines slide in at the bottom and push the rest up. */
+.setup-log {
+  border: 1px solid var(--cds-border-subtle);
+  background: #0a0a0a;
+  color: #ededed;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+.setup-log__title {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  color: #a1a1a1;
+}
+.setup-log__lines {
+  height: 16rem;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+.setup-log__line {
+  display: flex;
+  gap: 1rem;
+  padding: 0 0.75rem;
+  animation: log-in 0.25s ease-out;
+}
+.setup-log__line:hover {
+  background: #1a1a1a;
+}
+.setup-log__time {
+  flex: none;
+  width: 2.75rem;
+  color: #6f6f6f;
+  font-variant-numeric: tabular-nums;
+}
+.setup-log__waiting {
+  color: #6f6f6f;
+}
+.setup-log__text {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .setup-log__line {
+    animation: none;
+  }
+}
