@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
 import { downloadInstaller, installerFor } from "@/lib/download";
 import type { DotState } from "@/lib/dot-state";
-import { modelFor } from "@/lib/models";
+import { type Model, modelFor } from "@/lib/models";
 import { useModelTerms } from "@/lib/use-model-terms";
 import { isRunning, useRunStore } from "@/store/run";
 import InstallApp from "./install-app";
@@ -27,10 +27,8 @@ type Props = {
 export default function Demo({ dot, version, inputs, onChange, loggedIn = false, acceptedTerms }: Props) {
   const v = findVersion(dot, version) ?? latest(dot);
   const { prompt, seed } = inputs;
-  const { runner, job, image, error, shading, installing, logs, access, init, start } = useRunStore();
+  const { runner, job, image, shading, init, start } = useRunStore();
   const model = modelFor(dot);
-  const [termsAccepted, acceptTerms] = useModelTerms(model, loggedIn, acceptedTerms);
-  const [askTerms, setAskTerms] = useState(false);
   const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
@@ -44,7 +42,7 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
       installerFor(navigator.userAgent).then((os) => os && downloadInstaller(os));
     });
   // The first run on a model asks to accept its terms.
-  const onRun = () => (termsAccepted ? run() : setAskTerms(true));
+  const { onRun, dialog } = useTermsGate(model, run, loggedIn, acceptedTerms);
 
   return (
     <section aria-label="Try a dot" className="flex flex-col gap-6">
@@ -82,29 +80,9 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
           </Button>
           <Status />
         </div>
-        {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
-        {model && access && <ModelAccess model={model} access={access} />}
-        {installing ? (
-          <InstallApp />
-        ) : (
-          runner.state === "setup" && (
-            <SetupLog lines={logs} title="DotStories app · setup" status={runner.setup.message} />
-          )
-        )}
+        <Panels model={model} />
       </div>
-
-      {model && askTerms && (
-        <ModelTerms
-          model={model}
-          open
-          onClose={() => setAskTerms(false)}
-          onAccept={() => {
-            acceptTerms();
-            setAskTerms(false);
-            run();
-          }}
-        />
-      )}
+      {dialog}
 
       <p className="text-sm text-[var(--cds-text-secondary)] md:hidden">
         Running a dot needs a desktop computer. You can browse dots here.
@@ -125,6 +103,42 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
         </figcaption>
       </figure>
     </section>
+  );
+}
+
+/** The first run on a model opens its terms; Run continues once they're accepted. */
+function useTermsGate(model: Model | undefined, run: () => void, loggedIn: boolean, fromServer?: string[]) {
+  const [accepted, accept] = useModelTerms(model, loggedIn, fromServer);
+  const [asking, setAsking] = useState(false);
+  const onRun = () => (accepted ? run() : setAsking(true));
+  const dialog =
+    model && asking ? (
+      <ModelTerms
+        model={model}
+        open
+        onClose={() => setAsking(false)}
+        onAccept={() => {
+          accept();
+          setAsking(false);
+          run();
+        }}
+      />
+    ) : null;
+  return { onRun, dialog };
+}
+
+/** Under the Run button: errors, model access steps, installing the app, its setup log. */
+function Panels({ model }: { model: Model | undefined }) {
+  const { runner, error, installing, logs, access } = useRunStore();
+  return (
+    <>
+      {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
+      {model && access && <ModelAccess model={model} access={access} />}
+      {installing && <InstallApp />}
+      {!installing && runner.state === "setup" && (
+        <SetupLog lines={logs} title="DotStories app · setup" status={runner.setup.message} />
+      )}
+    </>
   );
 }
 
