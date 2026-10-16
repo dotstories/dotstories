@@ -11,6 +11,13 @@ export const INFO = {
   estimate: { run_seconds: [5, 15], label: "~5–15 seconds", download_gb: 36, download_minutes: 36, warning: null },
 };
 
+const HF_MODEL = "https://huggingface.co/krea/Krea-2-Turbo";
+
+/** The visitor accepted the model terms before (this browser). */
+export async function acceptedTerms(page: Page) {
+  await page.addInitScript(() => localStorage.setItem("dotstories:model-terms", JSON.stringify(["krea2-turbo@1.0"])));
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -18,7 +25,12 @@ const CORS = {
 };
 
 /** Fakes the DotStories app on 127.0.0.1, like runner/engine/server.py. Returns the jobs it received. */
-export async function fakeRunner(page: Page, image = "e2e/fixtures/raw-weeping-gate.png", isUp = () => true) {
+export async function fakeRunner(
+  page: Page,
+  image = "e2e/fixtures/raw-weeping-gate.png",
+  isUp = () => true,
+  hf = { status: "ok", tokens: [] as string[] }, // Hugging Face access for the gated model
+) {
   const statuses = [
     { id: "abc", status: "loading", progress: null, error: null },
     { id: "abc", status: "running", progress: { step: 4, steps: 8, eta: 2 }, error: null },
@@ -32,6 +44,12 @@ export async function fakeRunner(page: Page, image = "e2e/fixtures/raw-weeping-g
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     const json = (body: unknown, status = 200) => route.fulfill({ status, headers: CORS, json: body });
     if (path === "/info") return json(INFO);
+    if (path === "/access") return json({ model: "krea/Krea-2-Turbo", status: hf.status, url: HF_MODEL });
+    if (path === "/hf-token" && req.method() === "POST") {
+      hf.tokens.push(req.postDataJSON().token);
+      hf.status = "ok";
+      return json({ model: "krea/Krea-2-Turbo", status: "ok", url: HF_MODEL });
+    }
     if (path === "/jobs" && req.method() === "POST") {
       sent.push(req.postDataJSON());
       return json({ id: "abc" }, 202);

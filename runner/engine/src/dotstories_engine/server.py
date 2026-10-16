@@ -4,6 +4,8 @@ GET  /info              hardware, tier, estimate
 POST /jobs              start a dot run -> {"id": ...}
 GET  /jobs/<id>         status + progress
 GET  /jobs/<id>/image   the result (PNG)
+GET  /access?model=     may this computer download a gated model? (see access.py)
+POST /hf-token          save the person's Hugging Face token on this computer -> access
 
 Only the DotStories website may call it (checked by the browser's Origin header).
 """
@@ -13,7 +15,9 @@ import threading
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
+from . import access as hf
 from .krea import Job
 
 PORT = 47761
@@ -96,6 +100,8 @@ class Jobs:
             state["status"] = "done"
         except Exception as e:
             state["error"] = f"{type(e).__name__}: {e}"
+            if hf.is_access_error(e):
+                state["code"] = "model-access"  # the website shows how to get access
             state["status"] = "error"
 
     def public(self, job_id):
@@ -103,7 +109,7 @@ class Jobs:
         return None if j is None else {k: v for k, v in j.items() if k != "image"}
 
 
-def make_server(port: int, out_dir: Path, run, info) -> ThreadingHTTPServer:
+def make_server(port: int, out_dir: Path, run, info, access=hf.access, save_token=hf.save_token) -> ThreadingHTTPServer:
     jobs = Jobs(out_dir, run)
 
     class Handler(BaseHTTPRequestHandler):
@@ -144,7 +150,14 @@ def make_server(port: int, out_dir: Path, run, info) -> ThreadingHTTPServer:
         def do_GET(self):
             if not self.origin_ok():
                 return self.send(403, {"error": "origin not allowed"})
-            parts = self.path.split("?")[0].strip("/").split("/")
+            url = urlparse(self.path)
+            parts = url.path.strip("/").split("/")
+            if parts == ["access"]:
+                model = parse_qs(url.query).get("model", [""])[0]
+                try:
+                    return self.send(200, access(model))
+                except ValueError as e:
+                    return self.send(400, {"error": str(e)})
             if parts == ["health"]:
                 return self.send(200, {"ok": True})
             if parts == ["info"]:
@@ -162,6 +175,8 @@ def make_server(port: int, out_dir: Path, run, info) -> ThreadingHTTPServer:
         def do_POST(self):
             if not self.origin_ok(required=True):
                 return self.send(403, {"error": "origin not allowed"})
+            if self.path == "/hf-token":
+                return self.hf_token()
             if self.path != "/jobs":
                 return self.send(404, {"error": "not found"})
             try:
@@ -173,5 +188,20 @@ def make_server(port: int, out_dir: Path, run, info) -> ThreadingHTTPServer:
             if job_id is None:
                 return self.send(409, {"error": "a dot is already running"})
             return self.send(202, {"id": job_id})
+
+        def hf_token(self):
+            """Save the token, then check it against the model: the answer says what's still missing."""
+            try:
+                length = min(int(self.headers.get("Content-Length", 0)), 4_000)
+                body = json.loads(self.rfile.read(length) or b"null")
+                if not isinstance(body, dict):
+                    raise ValueError("body must be a JSON object")
+                model = body.get("model", "")
+                if model not in hf.GATED:
+                    raise ValueError("unknown model")
+                save_token(body.get("token"))
+            except (ValueError, json.JSONDecodeError) as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(200, access(model))
 
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)

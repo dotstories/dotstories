@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fakeRelease, fakeRunner, fakeSetup, loopback, RUNNER, SETUP, stubPython } from "./fakes";
+import { acceptedTerms, fakeRelease, fakeRunner, fakeSetup, loopback, RUNNER, SETUP, stubPython } from "./fakes";
 
 test("without the app: Run offers to install it", async ({ page }) => {
   await loopback(page, "granted");
@@ -14,6 +14,7 @@ test("one click without the app: download, live setup log, then the dot runs by 
   let log: { n: number; t: number; text: string }[] | null = null; // null = app not installed yet
   let engineUp = false;
   await loopback(page, "granted");
+  await acceptedTerms(page);
   await fakeRelease(page);
   await fakeSetup(page, () => log);
   const sent = await fakeRunner(page, undefined, () => engineUp);
@@ -53,6 +54,7 @@ test("before the browser asked: no lookup on page load", async ({ page }) => {
 
 test("with the app: estimate, Run, progress, result", async ({ page }) => {
   await loopback(page, "granted");
+  await acceptedTerms(page);
   const sent = await fakeRunner(page);
   await stubPython(page);
   await page.goto("/");
@@ -74,4 +76,55 @@ test("on a phone: browse only, no Run", async ({ browser }) => {
   await expect(page.getByText(/needs a desktop computer/i)).toBeVisible();
   await expect(page.getByRole("button", { name: "Run" })).toBeHidden();
   await page.close();
+});
+
+test("first run: accept the model terms, then it runs; next time no question", async ({ page }) => {
+  await loopback(page, "granted");
+  const sent = await fakeRunner(page);
+  await stubPython(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Run" }).click();
+  const dialog = page.getByRole("dialog", { name: /krea 2 turbo · terms of use/i });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Krea 2 Community License" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Accept and run" })).toBeDisabled();
+  expect(sent).toHaveLength(0);
+
+  await dialog.getByText(/i have read and agree/i).click();
+  await dialog.getByRole("button", { name: "Accept and run" }).click();
+  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible();
+  expect(sent).toHaveLength(1);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("dialog", { name: /terms of use/i })).toBeHidden();
+  await expect.poll(() => sent.length).toBe(2);
+});
+
+test("gated model: paste a Hugging Face token, it goes to the app only, then the dot runs", async ({ page }) => {
+  const hf = { status: "no-token", tokens: [] as string[] };
+  const toSite: string[] = [];
+  page.on("request", (r) => {
+    if (r.postData()?.includes("hf_e2e")) toSite.push(r.url());
+  });
+  await loopback(page, "granted");
+  await acceptedTerms(page);
+  const sent = await fakeRunner(page, undefined, undefined, hf);
+  await stubPython(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Run" }).click();
+  const card = page.getByRole("region", { name: /get access to krea 2 turbo/i });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("link", { name: /krea 2 turbo page/i })).toHaveAttribute("href", "https://huggingface.co/krea/Krea-2-Turbo");
+  expect(sent).toHaveLength(0);
+
+  await card.getByLabel("Hugging Face token").fill("hf_e2eToken1234567890abcdef");
+  await card.getByRole("button", { name: "Save to the app" }).click();
+  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible();
+  await expect(card).toBeHidden();
+  expect(hf.tokens).toEqual(["hf_e2eToken1234567890abcdef"]);
+  expect(toSite).toEqual([`${RUNNER}/hf-token`]); // never to dotstories.com
+  expect(sent).toHaveLength(1);
 });

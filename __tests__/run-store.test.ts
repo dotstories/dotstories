@@ -39,6 +39,7 @@ const reset = () =>
     installing: false,
     logs: [],
     pending: null,
+    access: null,
     watching: false,
     pollMs: 0,
     watchMs: 0,
@@ -114,9 +115,16 @@ describe("run store", () => {
     const s = useRunStore.getState();
     expect(s.image).toBe(`${RUNNER_URL}/jobs/abc/image`);
     expect(s.error).toBeNull();
-    expect(calls).toEqual(["POST /jobs", "GET /jobs/abc", "GET /jobs/abc", "GET /jobs/abc"]);
+    expect(calls).toEqual([
+      "GET /access?model=krea%2FKrea-2-Turbo", // an older app answers 404: run anyway
+      "POST /jobs",
+      "GET /jobs/abc",
+      "GET /jobs/abc",
+      "GET /jobs/abc",
+    ]);
 
-    const sent = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+    const post = (global.fetch as jest.Mock).mock.calls.find(([, init]) => init?.method === "POST");
+    const sent = JSON.parse(post[1].body);
     expect(sent).toEqual(latest(darkFantasy).inputs);
   });
 
@@ -233,6 +241,87 @@ describe("run store", () => {
       expect(useRunStore.getState().runner.state).toBe("blocked");
       expect(onMissing).not.toHaveBeenCalled();
       expect(useRunStore.getState().watching).toBe(false);
+    });
+  });
+
+  describe("gated model (Hugging Face access)", () => {
+    const URL_ = "https://huggingface.co/krea/Krea-2-Turbo";
+    const access = (status: string) => ({ model: "krea/Krea-2-Turbo", status, url: URL_ });
+
+    /** The app: /access answers from `now()`, /hf-token sets it, jobs finish at once. */
+    function gatedApp(now: { status: string }, jobError?: object) {
+      const calls: string[] = [];
+      global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+        const path = url.replace(RUNNER_URL, "");
+        calls.push(`${init?.method ?? "GET"} ${path}`);
+        const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
+        if (path.startsWith("/access")) return json(access(now.status));
+        if (path === "/hf-token") {
+          const { token } = JSON.parse(String(init?.body));
+          if (!token.startsWith("hf_")) return json({ error: "That doesn't look like a Hugging Face token" }, 400);
+          now.status = "ok";
+          return json(access("ok"));
+        }
+        if (path === "/jobs") return json({ id: "abc" }, 202);
+        if (path === "/jobs/abc")
+          return json(jobError ?? { id: "abc", status: "done", progress: null, error: null });
+        return json({ error: "not found" }, 404);
+      }) as unknown as typeof fetch;
+      return calls;
+    }
+
+    it("no access yet: shows the steps, starts nothing, keeps the run for later", async () => {
+      const calls = gatedApp({ status: "no-token" });
+      await useRunStore.getState().run(latest(darkFantasy).inputs);
+      const s = useRunStore.getState();
+      expect(s.access).toEqual(access("no-token"));
+      expect(s.pending?.inputs).toEqual(latest(darkFantasy).inputs);
+      expect(calls).not.toContain("POST /jobs");
+    });
+
+    it("saving the token runs the dot by itself", async () => {
+      const calls = gatedApp({ status: "no-token" });
+      await useRunStore.getState().run(latest(darkFantasy).inputs);
+      await useRunStore.getState().saveToken("  hf_abcdefghijklmnopqrstuvwxyz  ");
+      const s = useRunStore.getState();
+      expect(s.access).toBeNull();
+      expect(s.pending).toBeNull();
+      expect(s.image).toBe(`${RUNNER_URL}/jobs/abc/image`);
+      expect(calls).toContain("POST /hf-token");
+      const sent = (global.fetch as jest.Mock).mock.calls.find(([u]) => String(u).endsWith("/hf-token"));
+      expect(sent[0]).toBe(`${RUNNER_URL}/hf-token`); // to this computer only
+      expect(JSON.parse(sent[1].body)).toEqual({ model: "krea/Krea-2-Turbo", token: "hf_abcdefghijklmnopqrstuvwxyz" });
+    });
+
+    it("a wrong token says why and keeps the steps", async () => {
+      gatedApp({ status: "no-token" });
+      await useRunStore.getState().run(latest(darkFantasy).inputs);
+      await useRunStore.getState().saveToken("nope");
+      expect(useRunStore.getState().error).toMatch(/hugging face token/i);
+      expect(useRunStore.getState().access?.status).toBe("no-token");
+    });
+
+    it("terms accepted on Hugging Face later: Check again runs it", async () => {
+      const now = { status: "not-accepted" };
+      gatedApp(now);
+      await useRunStore.getState().run(latest(darkFantasy).inputs);
+      expect(useRunStore.getState().access?.status).toBe("not-accepted");
+      now.status = "ok";
+      await useRunStore.getState().recheckAccess();
+      expect(useRunStore.getState().access).toBeNull();
+      expect(useRunStore.getState().image).toBe(`${RUNNER_URL}/jobs/abc/image`);
+    });
+
+    it("a download refused by the gate shows the steps, not a raw error", async () => {
+      const now = { status: "ok" };
+      gatedApp(now, { id: "abc", status: "error", progress: null, error: "GatedRepoError: 401", code: "model-access" });
+      const run = useRunStore.getState().run(latest(darkFantasy).inputs);
+      now.status = "not-accepted"; // revoked between the check and the download
+      await run;
+      const s = useRunStore.getState();
+      expect(s.error).toBeNull();
+      expect(s.access?.status).toBe("not-accepted");
+      expect(s.pending).not.toBeNull();
     });
   });
 });

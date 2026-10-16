@@ -138,3 +138,68 @@ def test_only_one_dot_runs_at_a_time(tmp_path):
     assert call(f"{base}/jobs", "POST", JOB)[0] == 409
     release.set()
     srv.shutdown()
+
+
+# ---------- gated models (Hugging Face access) ----------
+
+TOKEN = "hf_" + "b" * 34
+
+
+@pytest.fixture
+def gated(tmp_path):
+    """Access answers from a fake Hugging Face; tokens saved in a list."""
+    saved = []
+
+    def access(model):
+        if model != "krea/Krea-2-Turbo":
+            raise ValueError("unknown model")
+        return {"model": model, "status": "ok" if saved else "no-token", "url": f"https://huggingface.co/{model}"}
+
+    def save_token(token):
+        if not isinstance(token, str) or not token.startswith("hf_"):
+            raise ValueError("That doesn't look like a Hugging Face token")
+        saved.append(token)
+
+    srv = make_server(port=0, out_dir=tmp_path, run=fake_run, info=dict, access=access, save_token=save_token)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{srv.server_address[1]}", saved
+    srv.shutdown()
+
+
+def test_access_says_what_is_missing(gated):
+    base, _ = gated
+    status, _, body = call(f"{base}/access?model=krea/Krea-2-Turbo")
+    assert status == 200
+    assert json.loads(body)["status"] == "no-token"
+    assert call(f"{base}/access?model=someone/else")[0] == 400
+
+
+def test_save_token_then_access_is_ok(gated):
+    base, saved = gated
+    status, _, body = call(f"{base}/hf-token", "POST", {"model": "krea/Krea-2-Turbo", "token": TOKEN})
+    assert status == 200
+    assert json.loads(body)["status"] == "ok"
+    assert saved == [TOKEN]
+
+
+def test_token_needs_the_site_and_a_real_token(gated):
+    base, saved = gated
+    assert call(f"{base}/hf-token", "POST", {"model": "krea/Krea-2-Turbo", "token": TOKEN}, origin=None)[0] == 403
+    assert call(f"{base}/hf-token", "POST", {"model": "krea/Krea-2-Turbo", "token": TOKEN}, origin="https://evil.example")[0] == 403
+    assert call(f"{base}/hf-token", "POST", {"model": "krea/Krea-2-Turbo", "token": "nope"})[0] == 400
+    assert call(f"{base}/hf-token", "POST", {"model": "someone/else", "token": TOKEN})[0] == 400
+    assert saved == []
+
+
+def test_gate_errors_are_marked_on_the_job(tmp_path):
+    def gated_download(job, out, emit):
+        raise type("GatedRepoError", (Exception,), {})("401 Client Error. Cannot access gated repo")
+
+    srv = make_server(port=0, out_dir=tmp_path, run=gated_download, info=dict)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+    _, _, body = call(f"{base}/jobs", "POST", JOB)
+    job = wait_done(base, json.loads(body)["id"])
+    srv.shutdown()
+    assert job["status"] == "error"
+    assert job["code"] == "model-access"

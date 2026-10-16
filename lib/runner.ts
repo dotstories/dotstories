@@ -32,6 +32,14 @@ export type JobStatus = {
   status: "queued" | "loading" | "running" | "done" | "error";
   progress: { step: number; steps: number; eta: number } | null;
   error: string | null;
+  code?: "model-access"; // the download needs the person's Hugging Face access
+};
+
+/** May this computer download a gated model? See runner/engine/src/dotstories_engine/access.py */
+export type Access = {
+  model: string;
+  status: "ok" | "no-token" | "not-accepted" | "bad-token" | "offline";
+  url: string;
 };
 
 // Chrome's Local Network Access: requests from the site to this computer are marked "loopback".
@@ -82,6 +90,23 @@ export async function loopbackPermission(): Promise<Permission> {
   }
   return "unknown";
 }
+
+/** null = an app without access checks (older version): just try to run. */
+export async function getAccess(model: string): Promise<Access | null> {
+  try {
+    return await call<Access>(`/access?model=${encodeURIComponent(model)}`, undefined, 20_000);
+  } catch {
+    return null;
+  }
+}
+
+/** The token goes to the app on this computer only (127.0.0.1), never to dotstories.com. */
+export const saveHfToken = (model: string, token: string) =>
+  call<Access>(
+    "/hf-token",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, token }) },
+    20_000,
+  );
 
 export const startJob = (inputs: Inputs) =>
   call<{ id: string }>("/jobs", {
