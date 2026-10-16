@@ -36,6 +36,8 @@ type RunState = {
   shading: boolean; // post-steps running in the browser
   installing: boolean; // the user pressed Run without the app: download + setup in progress
   logs: SetupLine[]; // the app's setup log, live
+  jobLogs: SetupLine[]; // what the app does for this run (download, loading, steps), live
+  showLog: boolean; // pressed Run: the log stays open
   pending: Pending | null; // what to run as soon as the app is ready (or has model access)
   access: Access | null; // set: the model needs the person's Hugging Face access first
   watching: boolean;
@@ -67,6 +69,8 @@ export const useRunStore = create<RunState>((set, get) => ({
   shading: false,
   installing: false,
   logs: [],
+  jobLogs: [],
+  showLog: false,
   pending: null,
   access: null,
   watching: false,
@@ -101,6 +105,7 @@ export const useRunStore = create<RunState>((set, get) => ({
 
   /** The Run button: run now, or find/install the app first and run as soon as it's ready. */
   start: async (inputs, postSteps = [], onMissing) => {
+    set({ showLog: true });
     if (get().runner.state === "ready") return get().run(inputs, postSteps);
     set({ pending: { inputs, postSteps }, error: null });
     await get().checkRunner();
@@ -136,7 +141,7 @@ export const useRunStore = create<RunState>((set, get) => ({
   },
 
   run: async (inputs, postSteps = []) => {
-    set({ job: null, image: null, error: null, shading: false });
+    set({ job: null, image: null, error: null, shading: false, jobLogs: [] });
     // A gated model: first make sure this computer may download it (else the run fails after a while).
     const access = await getAccess(MODEL);
     if (access && access.status !== "ok") return set({ access, pending: { inputs, postSteps } });
@@ -144,9 +149,12 @@ export const useRunStore = create<RunState>((set, get) => ({
     let id: string;
     try {
       id = (await startJob(inputs)).id;
+      let since = 0;
       for (;;) {
-        const job = await getJob(id);
-        set({ job });
+        const job = await getJob(id, since);
+        const lines = job.log?.lines ?? [];
+        since = job.log?.next ?? since;
+        set({ job, jobLogs: [...get().jobLogs, ...lines].slice(-MAX_LOGS) });
         if (job.status === "done") break;
         if (job.status === "error" && job.code === "model-access") {
           // E.g. access was revoked since the check: show the steps again.

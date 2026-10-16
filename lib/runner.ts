@@ -33,6 +33,8 @@ export type JobStatus = {
   progress: { step: number; steps: number; eta: number } | null;
   error: string | null;
   code?: "model-access"; // the download needs the person's Hugging Face access
+  message?: string; // what the app is doing now (short)
+  log?: { next: number; lines: SetupLine[] }; // new log lines (ask "since next")
 };
 
 /** May this computer download a gated model? See runner/engine/src/dotstories_engine/access.py */
@@ -115,6 +117,6 @@ export const startJob = (inputs: Inputs) =>
     body: JSON.stringify(inputs),
   });
 
-export const getJob = (id: string) => call<JobStatus>(`/jobs/${id}`);
+export const getJob = (id: string, since = 0) => call<JobStatus>(`/jobs/${id}${since ? `?since=${since}` : ""}`);
 
 export const imageUrl = (id: string) => `${RUNNER_URL}/jobs/${id}/image`;

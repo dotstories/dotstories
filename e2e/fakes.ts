@@ -31,10 +31,32 @@ export async function fakeRunner(
   isUp = () => true,
   hf = { status: "ok", tokens: [] as string[] }, // Hugging Face access for the gated model
 ) {
+  const line = (n: number, text: string) => ({ n, t: n, text });
   const statuses = [
-    { id: "abc", status: "loading", progress: null, error: null },
-    { id: "abc", status: "running", progress: { step: 4, steps: 8, eta: 2 }, error: null },
-    { id: "abc", status: "done", progress: { step: 8, steps: 8, eta: 0 }, error: null },
+    {
+      id: "abc",
+      status: "loading",
+      progress: null,
+      error: null,
+      message: "Downloading the model: 12.0 of ~34 GB",
+      log: { next: 2, lines: [line(0, "Starting"), line(1, "Downloading the model: 12.0 of ~34 GB")] },
+    },
+    {
+      id: "abc",
+      status: "running",
+      progress: { step: 4, steps: 8, eta: 2 },
+      error: null,
+      message: "Making the image: step 4 of 8",
+      log: { next: 3, lines: [line(2, "Making the image: step 4 of 8")] },
+    },
+    {
+      id: "abc",
+      status: "done",
+      progress: { step: 8, steps: 8, eta: 0 },
+      error: null,
+      message: "Done in 9 s",
+      log: { next: 4, lines: [line(3, "Done in 9 s")] },
+    },
   ];
   const sent: unknown[] = [];
   await page.route(`${RUNNER}/**`, async (route: Route) => {

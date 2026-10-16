@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from .estimate import estimate
+from .progress import clock
 from .hardware import detect, tier
 from .plan import memory_plan
 
@@ -85,13 +86,23 @@ def model_runner():
         from .sandbox import locked
 
         from .access import use_token
+        from .krea import MODEL
+        from .progress import download_monitor
 
-        plan = info()["plan"]
+        status = info()
+        plan = status["plan"]
         if plan not in cache:
-            emit({"event": "loading"})
+            gb = status["estimate"]["download_gb"]
+            emit({"event": "loading", "message": f"Getting {MODEL} ready ({status['hardware']['name']}, plan {plan})"})
+            emit({"event": "log", "message": f"First run: downloading ~{gb:.0f} GB from Hugging Face, then loading it"
+                                             if gb else "Model found on this computer: loading it into memory"})
             use_token()  # gated models (Krea 2) download with the person's own token
             cache.clear()
-            cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
+            t0 = time.monotonic()
+            folder = Path(os.environ["HF_HOME"]) / "hub" / f"models--{MODEL.replace('/', '--')}"
+            with download_monitor(emit, folder, gb):
+                cache[plan] = load_pipeline(plan, reuse(), emit)  # may download: network allowed here
+            emit({"event": "log", "message": f"Model ready in {clock(time.monotonic() - t0)}"})
         with locked():  # no network, no new processes while the dot runs
             generate(job, cache[plan], make_generator(job.seed), out, emit)
 

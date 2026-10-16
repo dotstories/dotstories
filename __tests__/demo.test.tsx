@@ -27,6 +27,8 @@ const show = (state: object, acceptedTerms: string[] = TERMS) => {
     shading: false,
     installing: false,
     logs: [],
+    jobLogs: [],
+    showLog: false,
     access: null,
     init: async () => {},
     checkRunner: async () => {},
@@ -202,5 +204,21 @@ describe("Demo", () => {
       fireEvent.click(screen.getByRole("button", { name: "Check again" }));
       expect(recheckAccess).toHaveBeenCalled();
     });
+  });
+
+  it("after Run: one live log with what the app is doing, and the short status", () => {
+    show({
+      runner: { state: "ready", info: INFO },
+      showLog: true,
+      job: { id: "a", status: "loading", progress: null, error: null, message: "Downloading the model: 12.0 of ~34 GB" },
+      jobLogs: [
+        { n: 0, t: 0, text: "Starting" },
+        { n: 1, t: 5, text: "Downloading the model: 12.0 of ~34 GB" },
+      ],
+    });
+    const log = screen.getByRole("log", { name: /setup log/i });
+    expect(log).toHaveTextContent("0:00Starting");
+    expect(log).toHaveTextContent("0:05Downloading the model: 12.0 of ~34 GB");
+    expect(screen.getByText(/getting the model ready/i)).toBeInTheDocument();
   });
 });
