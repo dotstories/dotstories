@@ -17,6 +17,13 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
   });
 
+  it("links to the community on GitHub", async () => {
+    render(await Header());
+    const link = screen.getByRole("link", { name: /DotStories on GitHub/ });
+    expect(link).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
   it("logged in: username and Log out", async () => {
     mockSession.current = { user: { id: "1", username: "dayo" } };
     render(await Header());
@@ -26,9 +33,18 @@ describe("Header", () => {
 });
 
 describe("Footer", () => {
-  it("links to the open source code and the socials", () => {
+  it("invites people to the community on GitHub", () => {
     render(<Footer />);
+    expect(screen.getByText(/open source and made by its community/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+    expect(screen.getByRole("link", { name: "Contribute on GitHub" })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
+  });
+
+  it("the project's own socials: Discord, X, GitHub (no personal profiles)", () => {
+    render(<Footer />);
+    expect(screen.getByRole("link", { name: /DotStories on Discord/ })).toHaveAttribute("href", "https://discord.gg/TJWKQkkuHN");
+    expect(screen.getByRole("link", { name: /DotStories on X/ })).toHaveAttribute("href", "https://x.com/dotstoriescom");
+    expect(screen.queryByRole("link", { name: /Nestor|LinkedIn/ })).not.toBeInTheDocument();
   });
 
   it("contact, blog and legal pages", () => {

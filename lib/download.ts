@@ -1,6 +1,8 @@
+import { REPO } from "./community";
+
 export type OS = "windows" | "mac" | "phone" | "other";
 
-const LATEST = "https://github.com/Dayonel/dotstories/releases/latest";
+const LATEST = `${REPO}/releases/latest`;
 
 /** Stable names, published by .github/workflows/release.yml. */
 export const DOWNLOADS = {

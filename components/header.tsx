@@ -1,6 +1,8 @@
+import { LogoGithub } from "@carbon/icons-react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
+import { REPO } from "@/lib/community";
 import Avatar from "./avatar";
 
 export default async function Header() {
@@ -19,6 +21,16 @@ export default async function Header() {
           <Link href="/download" className="cds--link">
             Get the app
           </Link>
+          <a
+            href={REPO}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="DotStories on GitHub (opens in a new tab)"
+            className="cds--link flex items-center gap-1"
+          >
+            <LogoGithub size={20} />
+            <span className="hidden md:inline">GitHub</span>
+          </a>
           {session ? (
             <>
               <Link href="/profile" className="flex items-center gap-2 text-sm" aria-label="Your profile">

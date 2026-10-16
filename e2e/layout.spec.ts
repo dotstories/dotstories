@@ -2,8 +2,10 @@ import { expect, test } from "@playwright/test";
 
 test("header and footer on the homepage", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("banner").getByRole("link", { name: "DotStories" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "DotStories", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /source code on github/i })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: /DotStories on GitHub/ })).toBeVisible();
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Contribute on GitHub" })).toBeVisible();
 });
 
 test("Carbon dark theme is applied", async ({ page }) => {
