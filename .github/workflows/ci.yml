@@ -11,6 +11,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # No plans, private notes or session links in the public repo.
+  private:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # PRs: check every commit since the base
+          persist-credentials: false
+      - run: node scripts/check-private.mjs "$BASE_SHA"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
   # PRs may change dependencies: refresh the lockfile and commit it back.
   # Runs no package code (--ignore-scripts): the write token never sits next to untrusted code.
   lockfile:
