@@ -1,8 +1,31 @@
 # DotStories
 
-What is possible today with AI. Pick a workflow ("dot"), press **Run**, get the exact result. Free, on your own computer.
+**What is possible today with AI.** Share AI workflows ("dots"), and run them with one click on your own computer.
 
-See [PLAN.md](PLAN.md) for the plan.
+A prompt alone is rarely enough. A dot is the whole workflow: the model, the prompt, the seed, the settings and the steps
+after it (like adding a title and effects to an image). Anyone can run a dot and get the same result, for free, on their own
+hardware. Think CodePen, but for AI workflows.
+
+[Website](https://dotstories.com) · [Blog](https://blog.dotstories.com) · [Discord](https://discord.gg/TJWKQkkuHN) · [X](https://x.com/dotstoriescom)
+
+## Features
+
+- **One-click runs**: the DotStories app installs Python, the libraries and the model, then runs the dot on your GPU (or CPU).
+- **Uses what you already have**: models already downloaded by ComfyUI or Hugging Face are found and reused.
+- **Versions**: authors fix and improve their dots; you pick the latest version or an older one.
+- **Share and fork**: every dot has a link to share; public dots can be forked.
+- **Community**: likes, views and comments.
+- **Model terms first**: before the first run of a model, you read and accept its license and key points.
+
+## Models
+
+| Model | Maker | License |
+|---|---|---|
+| Krea 2 Turbo (images) | Krea.ai | [Krea 2 Community License](https://www.krea.ai/krea-2-licensing) |
+| Stable Audio 3 (music, runs in the app soon) | Stability AI | [Stability AI Community License](https://stability.ai/community-license-agreement) · Powered by Stability AI |
+
+Models are downloaded from their official sources; DotStories doesn't host model weights. Key points of each model:
+[dotstories.com/terms](https://dotstories.com/terms).
 
 ## Run it locally
 
@@ -49,17 +72,35 @@ pnpm test:e2e     # Playwright e2e on the Cloudflare runtime (needs `pnpm build:
 pnpm preview      # run in the Cloudflare Workers runtime locally (http://localhost:8787)
 ```
 
+## Project layout
+
+| Folder | What |
+|---|---|
+| `app/`, `components/`, `lib/`, `store/` | The website (Next.js on Cloudflare Workers) |
+| `runner/app/` | The desktop app that runs dots ([README](runner/app/README.md)) |
+| `runner/engine/` | The Python engine inside the app ([README](runner/engine/README.md)) |
+| `workers/` | Extra Cloudflare Workers |
+| `blog/` | blog.dotstories.com |
+| `migrations/` | Database (Cloudflare D1) migrations |
+| `__tests__/`, `e2e/` | Unit tests (Jest) and end-to-end tests (Playwright) |
+
 ## Deploy
 
-Every push to `main` runs CI, then deploys to Cloudflare Workers.
-
-One-time setup, in GitHub → Settings → Secrets and variables → Actions:
+Every push to `main` runs CI, then deploys to Cloudflare Workers. To deploy your own copy, add these in GitHub → Settings →
+Secrets and variables → Actions:
 
 | Secret | Where to get it |
 |---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → Account ID (right sidebar) |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create → "Edit Cloudflare Workers" template |
-| `ZEPTOMAIL_TOKEN` | ZeptoMail (zoho.eu) → Agents → your agent → SMTP/API → API → **Send Mail Token**. Sign-up codes and password resets. Prepaid credits, keep **Auto top-up off**: no surprise bills. |
+| `ZEPTOMAIL_TOKEN` | ZeptoMail → Agents → your agent → SMTP/API → API → Send Mail Token (sign-up codes, password resets) |
+
+## Contributing
+
+Contributions are welcome: code, docs, bug reports and dots. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+Everyone in the community follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Found a security issue? Please don't open a public issue: see [SECURITY.md](SECURITY.md).
 
 ## License
 
