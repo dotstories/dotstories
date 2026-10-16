@@ -46,6 +46,7 @@ test("footer: legal pages open and show who runs DotStories", async ({ page }) =
     await page.goto("/");
     await page.getByRole("contentinfo").getByRole("link", { name: link, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.getByText("DotStories is run by Dayonel")).toBeVisible();
   }
 });
 
