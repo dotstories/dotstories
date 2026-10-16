@@ -34,3 +34,5 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/actions/social", () => ({ toggleLike: jest.fn(), addComment: jest.fn(), deleteComment: jest.fn() }));
 jest.mock("@/actions/dot-state", () => ({ saveDotState: jest.fn(async () => {}) }));
 jest.mock("@/lib/saved-state", () => ({ sessionWithSetup: jest.fn(async () => null) }));
+jest.mock("@/actions/model-terms", () => ({ acceptModelTerms: jest.fn(async () => {}) }));
+jest.mock("@/lib/accepted-terms", () => ({ acceptedTerms: jest.fn(async () => []) }));

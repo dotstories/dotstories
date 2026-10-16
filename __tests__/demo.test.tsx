@@ -4,7 +4,6 @@ import { latest } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
 import { useRunStore } from "../store/run";
 
-jest.mock("../actions/model-terms", () => ({ acceptModelTerms: jest.fn(async () => {}) }));
 const TERMS = ["krea2-turbo@1.0"]; // accepted before (logged in, from D1)
 
 const INFO = {
