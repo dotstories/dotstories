@@ -49,6 +49,14 @@ test("footer: legal pages open and show who runs DotStories", async ({ page }) =
   }
 });
 
+test("terms: each model links to its key points", async ({ page }) => {
+  await page.goto("/terms");
+  await page.getByRole("main").getByRole("link", { name: "Stable Audio 3", exact: true }).click();
+  await expect(page).toHaveURL(/\/models\/stable-audio-3$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Stable Audio 3" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Training data" })).toBeVisible();
+});
+
 test("sign up says 16+ and links the terms", async ({ page }) => {
   await page.goto("/register");
   await expect(page.getByText(/16 or older/)).toBeVisible();

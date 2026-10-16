@@ -47,7 +47,11 @@ export default function ModelTerms({ model, open, onAccept, onClose }: Props) {
           <Link className="cds--link" href="/terms">
             Terms
           </Link>
-          ). Report harmful outputs to {model.report}.
+          ). Report harmful outputs to {model.report ?? "us"}. See{" "}
+          <Link className="cds--link" href={`/models/${model.engine}`} target="_blank">
+            all key points
+          </Link>
+          .
         </p>
         {model.gated && (
           <p className="text-[var(--cds-text-secondary)]">

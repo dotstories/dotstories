@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import CodeOfConduct from "../app/code-of-conduct/page";
 import Cookies from "../app/cookies/page";
 import Privacy from "../app/privacy/page";
+import ModelPage, { generateStaticParams } from "../app/models/[engine]/page";
 import Terms from "../app/terms/page";
+import { MODELS } from "../lib/models";
+
+const models = Object.values(MODELS).filter((m) => m !== undefined);
 
 describe.each([
   ["Terms of Service", Terms],
@@ -27,14 +31,12 @@ describe("Terms", () => {
     expect(screen.getAllByRole("link", { name: "Code of Conduct" })[0]).toHaveAttribute("href", "/code-of-conduct");
   });
 
-  it("every model's key points: use, out of scope, training data, safety, risks, license, reporting", () => {
+  it("lists every model with its key points page and license", () => {
     render(<Terms />);
-    for (const h of ["Capabilities and intended use", "Out-of-scope uses", "Training data", "Safety", "Risks and limitations",
-      "License and outputs", "Reporting and contact"]) {
-      expect(screen.getByRole("heading", { level: 4, name: h })).toBeInTheDocument();
+    for (const m of models) {
+      expect(screen.getByRole("link", { name: m.name })).toHaveAttribute("href", `/models/${m.engine}`);
+      expect(screen.getByRole("link", { name: m.license.name })).toHaveAttribute("href", m.license.url);
     }
-    expect(screen.getByRole("link", { name: "Krea 2 Community License" })).toHaveAttribute("href", "https://www.krea.ai/krea-2-licensing");
-    expect(screen.getAllByRole("link", { name: "safety@krea.ai" }).length).toBeGreaterThan(0);
   });
 
   it("the required rules", () => {
@@ -79,4 +81,37 @@ it("code of conduct: be kind, no doxxing, how to report", () => {
   expect(document.body.textContent).toMatch(/assume positive intent/i);
   expect(document.body.textContent).toMatch(/doxxing/i);
   expect(document.body.textContent).toMatch(/report/i);
+});
+
+describe("model key points pages", () => {
+  const text = () => document.body.textContent ?? "";
+  const renderModel = async (engine: string) => render(await ModelPage({ params: Promise.resolve({ engine }) }));
+
+  it("one page per model", () => {
+    expect(generateStaticParams()).toEqual(models.map((m) => ({ engine: m.engine })));
+  });
+
+  it.each(models.map((m) => [m.name, m] as const))("%s: use, out of scope, training data, safety, risks, license, reporting", async (_, m) => {
+    await renderModel(m.engine);
+    expect(screen.getByRole("heading", { level: 1, name: m.name })).toBeInTheDocument();
+    for (const h of ["Capabilities and intended use", "Out-of-scope uses", "Training data", "Safety", "Risks and limitations",
+      "License and outputs", "Reporting and contact"]) {
+      expect(screen.getByRole("heading", { level: 2, name: h })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole("link", { name: m.license.name })[0]).toHaveAttribute("href", m.license.url);
+    expect(text()).toMatch(/own documents always win/i);
+  });
+
+  it("Krea 2: where to report", async () => {
+    await renderModel("krea2-turbo");
+    expect(screen.getByRole("link", { name: "safety@krea.ai" })).toHaveAttribute("href", "mailto:safety@krea.ai");
+  });
+
+  it("Stable Audio 3: 18+, Powered by Stability AI, Gemma terms", async () => {
+    await renderModel("stable-audio-3");
+    expect(text()).toMatch(/18 or older/);
+    expect(text()).toMatch(/Powered by Stability AI/);
+    expect(text()).toMatch(/Gemma Terms of Use/);
+    expect(screen.getAllByRole("link", { name: "Stability AI Community License" })[0]).toHaveAttribute("href", "https://stability.ai/community-license-agreement");
+  });
 });

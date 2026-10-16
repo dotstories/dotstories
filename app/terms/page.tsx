@@ -45,38 +45,18 @@ export default function Terms() {
 
       <h2>4. AI models you run</h2>
       <p>
-        You must follow the terms of every AI model a dot uses: its license, its acceptable use policy and its model card. Before
-        you run a model for the first time, the app shows its key points and asks you to accept them. The key points are below;
-        the model&apos;s own documents always win.
+        You must follow the terms of every AI model a dot uses: its license, its acceptable use policy and its model card. Some
+        models have extra rules, for example a higher minimum age. Before you run a model for the first time, the app shows its
+        key points and asks you to accept them. Each model&apos;s key points have their own page; the model&apos;s own documents
+        always win.
       </p>
-      {models.map((m) => (
-        <section key={m.engine}>
-          <h3>
-            {m.name} by {m.maker}
-          </h3>
-          <h4>Capabilities and intended use</h4>
-          <p>{m.summary.use}</p>
-          <h4>Out-of-scope uses</h4>
-          <p>{m.summary.outOfScope}</p>
-          <h4>Training data</h4>
-          <p>{m.summary.training}</p>
-          <h4>Safety</h4>
-          <p>{m.summary.safety}</p>
-          <h4>Risks and limitations</h4>
-          <p>{m.summary.risks}</p>
-          <h4>License and outputs</h4>
-          <p>
-            {m.summary.outputs} License: <a href={m.license.url}>{m.license.name}</a>. Model card:{" "}
-            <a href={m.card}>{m.card.replace("https://", "")}</a>.
-          </p>
-          <h4>Reporting and contact</h4>
-          <p>
-            Report harmful, illegal or policy-violating results to <a href={`mailto:${m.report}`}>{m.report}</a> (reports of child
-            sexual abuse material are passed on to the authorities). General questions:{" "}
-            <a href={`mailto:${m.summary.support}`}>{m.summary.support}</a>. You can also report to us (section 9).
-          </p>
-        </section>
-      ))}
+      <ul>
+        {models.map((m) => (
+          <li key={m.engine}>
+            <Link href={`/models/${m.engine}`}>{m.name}</Link> by {m.maker}: <a href={m.license.url}>{m.license.name}</a>
+          </li>
+        ))}
+      </ul>
 
       <h2>5. What you make with dots</h2>
       <p>

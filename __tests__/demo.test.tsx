@@ -146,6 +146,7 @@ describe("Demo", () => {
         "href",
         "https://www.krea.ai/krea-2-licensing",
       );
+      expect(screen.getByRole("link", { name: "all key points" })).toHaveAttribute("href", "/models/krea2-turbo");
       expect(screen.getByRole("button", { name: "Accept and run" })).toBeDisabled();
       expect(start).not.toHaveBeenCalled();
 

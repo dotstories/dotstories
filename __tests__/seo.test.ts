@@ -2,6 +2,7 @@
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import { dots } from "../lib/dots";
+import { MODELS } from "../lib/models";
 
 it("the sitemap lists the home page, the catalog, every dot and the blog", () => {
   const urls = sitemap().map((e) => e.url);
@@ -18,6 +19,11 @@ it("the sitemap lists the home page, the catalog, every dot and the blog", () =>
 it("the sitemap lists the legal pages and the Code of Conduct", () => {
   const urls = sitemap().map((e) => e.url);
   for (const path of ["/terms", "/privacy", "/cookies", "/code-of-conduct"]) expect(urls).toContain(`https://dotstories.com${path}`);
+});
+
+it("the sitemap lists every model's key points page", () => {
+  const urls = sitemap().map((e) => e.url);
+  for (const engine of Object.keys(MODELS)) expect(urls).toContain(`https://dotstories.com/models/${engine}`);
 });
 
 it("robots: crawl the site, not the API or private pages; point to both sitemaps", () => {
