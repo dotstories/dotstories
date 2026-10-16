@@ -40,10 +40,11 @@ describe("Footer", () => {
     expect(screen.getByRole("link", { name: "Contribute on GitHub" })).toHaveAttribute("href", "https://github.com/Dayonel/dotstories");
   });
 
-  it("is about the project, not one person: no personal socials", () => {
+  it("the project's own socials: Discord, X, GitHub (no personal profiles)", () => {
     render(<Footer />);
-    expect(screen.queryByRole("link", { name: /on X/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /on LinkedIn/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /DotStories on Discord/ })).toHaveAttribute("href", "https://discord.gg/TJWKQkkuHN");
+    expect(screen.getByRole("link", { name: /DotStories on X/ })).toHaveAttribute("href", "https://x.com/dotstoriescom");
+    expect(screen.queryByRole("link", { name: /Nestor|LinkedIn/ })).not.toBeInTheDocument();
   });
 
   it("contact, blog and legal pages", () => {

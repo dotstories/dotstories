@@ -1,9 +1,15 @@
-import { LogoGithub } from "@carbon/icons-react";
+import { LogoDiscord, LogoGithub, LogoX } from "@carbon/icons-react";
 import Link from "next/link";
-import { REPO } from "@/lib/community";
+import { DISCORD, REPO, X } from "@/lib/community";
 import { BLOG } from "@/lib/share";
 import { OPERATOR } from "@/lib/operator";
 import LogoFull from "./logo-full";
+
+const SOCIAL = [
+  { href: DISCORD, label: "DotStories on Discord (opens in a new tab)", Icon: LogoDiscord },
+  { href: X, label: "DotStories on X (opens in a new tab)", Icon: LogoX },
+  { href: REPO, label: "DotStories source code on GitHub (opens in a new tab)", Icon: LogoGithub },
+];
 
 export default function Footer() {
   return (
@@ -22,15 +28,13 @@ export default function Footer() {
             </p>
           </div>
           <div className="flex flex-col items-center gap-6 md:items-end">
-            <a
-              href={REPO}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="DotStories source code on GitHub (opens in a new tab)"
-              className="text-[var(--cds-icon-primary)]"
-            >
-              <LogoGithub size={28} />
-            </a>
+            <div className="flex gap-6">
+              {SOCIAL.map(({ href, label, Icon }) => (
+                <a key={href} href={href} target="_blank" rel="noreferrer" aria-label={label} className="text-[var(--cds-icon-primary)]">
+                  <Icon size={28} />
+                </a>
+              ))}
+            </div>
             <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-6 gap-y-2">
               <a className="cds--link" href={`mailto:${OPERATOR.email}`}>
                 {OPERATOR.email}
