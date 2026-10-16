@@ -65,3 +65,8 @@ __pycache__/
 /workers/budget-guard/.wrangler/
 /.guard-build/
 .d1-copy.sql
+
+# private notes: never public (CI checks too, scripts/check-private.mjs)
+PLAN.md
+/claude/
+*.private.md
