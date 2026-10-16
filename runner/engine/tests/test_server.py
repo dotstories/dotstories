@@ -203,3 +203,19 @@ def test_gate_errors_are_marked_on_the_job(tmp_path):
     srv.shutdown()
     assert job["status"] == "error"
     assert job["code"] == "model-access"
+
+
+def test_job_log_lines_come_in_order_and_only_new_ones(server):
+    _, _, body = call(f"{server}/jobs", "POST", JOB)
+    job_id = json.loads(body)["id"]
+    job = wait_done(server, job_id)
+    texts = [line["text"] for line in job["log"]["lines"]]
+    assert texts[0] == "Starting"
+    assert "Making the image: step 3 of 3" in texts
+    assert texts[-1].startswith("Done in")
+    assert job["message"] == texts[-1]
+    assert [line["n"] for line in job["log"]["lines"]] == list(range(len(texts)))
+
+    nxt = job["log"]["next"]
+    _, _, body = call(f"{server}/jobs/{job_id}?since={nxt - 1}")
+    assert [line["text"] for line in json.loads(body)["log"]["lines"]] == texts[-1:]

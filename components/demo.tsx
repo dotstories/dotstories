@@ -127,19 +127,24 @@ function useTermsGate(model: Model | undefined, run: () => void, loggedIn: boole
   return { onRun, dialog };
 }
 
-/** Under the Run button: errors, model access steps, installing the app, its setup log. */
+/** Under the Run button: errors, model access steps, installing the app, and the app's live log. */
 function Panels({ model }: { model: Model | undefined }) {
-  const { runner, error, installing, logs, access } = useRunStore();
+  const { runner, error, installing, access, showLog } = useRunStore();
   return (
     <>
       {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
       {model && access && <ModelAccess model={model} access={access} />}
-      {installing && <InstallApp />}
-      {!installing && runner.state === "setup" && (
-        <SetupLog lines={logs} title="DotStories app · setup" status={runner.setup.message} />
-      )}
+      {installing ? <InstallApp /> : (runner.state === "setup" || showLog) && <RunLog />}
     </>
   );
+}
+
+/** One log for everything the app does after Run: its setup, then this run (download, loading, steps). */
+function RunLog() {
+  const { runner, logs, jobLogs, job } = useRunStore();
+  const lines = [...logs.map((l) => ({ ...l, id: `s${l.n}` })), ...jobLogs.map((l) => ({ ...l, id: `j${l.n}` }))];
+  const status = runner.state === "setup" ? runner.setup.message : (job?.message ?? (runner.state === "ready" ? "Ready" : "Waiting for the app"));
+  return <SetupLog lines={lines} title="DotStories app · log" status={status} />;
 }
 
 function Status() {
@@ -147,7 +152,7 @@ function Status() {
 
   if (shading) return <InlineLoading description="Adding title and effects in your browser…" />;
   if (job?.status === "loading" || job?.status === "queued")
-    return <InlineLoading description="Loading the model (first run downloads it)…" />;
+    return <InlineLoading description="Getting the model ready (first run downloads it) · see the log below" />;
   if (job?.status === "running" && job.progress) {
     const { step, steps, eta } = job.progress;
     return (

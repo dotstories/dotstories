@@ -66,6 +66,10 @@ test("with the app: estimate, Run, progress, result", async ({ page }) => {
   const result = page.getByRole("img", { name: /your result/i });
   await expect(result).toBeVisible();
   await expect(result).toHaveAttribute("src", /^blob:/);
+  // The log opened on Run and stays, with what the app did.
+  const log = page.getByRole("log", { name: /setup log/i });
+  await expect(log).toContainText("Downloading the model: 12.0 of ~34 GB");
+  await expect(log).toContainText("Done in 9 s");
   expect(await result.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
   expect(sent).toEqual([expect.objectContaining({ prompt: "A lone tower in the fog", seed: 54460995, steps: 8 })]);
 });

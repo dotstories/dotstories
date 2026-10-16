@@ -40,6 +40,8 @@ const reset = () =>
     logs: [],
     pending: null,
     access: null,
+    jobLogs: [],
+    showLog: false,
     watching: false,
     pollMs: 0,
     watchMs: 0,
@@ -323,5 +325,37 @@ describe("run store", () => {
       expect(s.access?.status).toBe("not-accepted");
       expect(s.pending).not.toBeNull();
     });
+  });
+
+  it("collects the app's log for this run, asking only for new lines", async () => {
+    const line = (n: number, text: string) => ({ n, t: n, text });
+    const answers = [
+      { status: "loading", message: "Downloading", log: { next: 2, lines: [line(0, "Starting"), line(1, "Downloading")] } },
+      { status: "running", message: "step 1", log: { next: 3, lines: [line(2, "step 1")] } },
+      { status: "done", message: "Done in 5 s", log: { next: 4, lines: [line(3, "Done in 5 s")] } },
+    ];
+    const asked: string[] = [];
+    global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const path = url.replace(RUNNER_URL, "");
+      const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
+      if (path === "/jobs" && init?.method === "POST") return json({ id: "abc" }, 202);
+      if (path.startsWith("/jobs/abc")) {
+        asked.push(path);
+        return json({ id: "abc", progress: null, error: null, ...answers.shift() });
+      }
+      return json({ error: "not found" }, 404);
+    }) as unknown as typeof fetch;
+
+    await useRunStore.getState().run(latest(darkFantasy).inputs);
+
+    expect(asked).toEqual(["/jobs/abc", "/jobs/abc?since=2", "/jobs/abc?since=3"]);
+    expect(useRunStore.getState().jobLogs.map((l) => l.text)).toEqual(["Starting", "Downloading", "step 1", "Done in 5 s"]);
+  });
+
+  it("Run opens the log and it stays open", async () => {
+    fakeRunner([{ id: "abc", status: "done", progress: null, error: null }]);
+    useRunStore.setState({ runner: { state: "ready", info: INFO } as never });
+    await useRunStore.getState().start(latest(darkFantasy).inputs);
+    expect(useRunStore.getState().showLog).toBe(true);
   });
 });

@@ -2,7 +2,7 @@
 
 GET  /info              hardware, tier, estimate
 POST /jobs              start a dot run -> {"id": ...}
-GET  /jobs/<id>         status + progress
+GET  /jobs/<id>?since=N status + progress + new log lines
 GET  /jobs/<id>/image   the result (PNG)
 GET  /access?model=     may this computer download a gated model? (see access.py)
 POST /hf-token          save the person's Hugging Face token on this computer -> access
@@ -12,6 +12,7 @@ Only the DotStories website may call it (checked by the browser's Origin header)
 import json
 import os
 import threading
+import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -62,6 +63,9 @@ def parse_job(d) -> Job:
     )
 
 
+MAX_LOG = 2000
+
+
 class Jobs:
     """One job at a time: the GPU can only do one."""
 
@@ -78,35 +82,58 @@ class Jobs:
             if self.busy():
                 return None
             job_id = uuid.uuid4().hex[:12]
-            self.jobs[job_id] = {"id": job_id, "status": "queued", "progress": None, "error": None}
+            self.jobs[job_id] = {"id": job_id, "status": "queued", "progress": None, "error": None,
+                                 "message": "Starting", "log": []}
         threading.Thread(target=self._work, args=(job_id, job), daemon=True).start()
         return job_id
 
     def _work(self, job_id, job):
         state = self.jobs[job_id]
         out = self.out_dir / f"{job_id}.png"
+        t0 = time.monotonic()
+
+        def log(text):
+            """One line in the live log on the website (and the short status next to Run)."""
+            lines = state["log"]
+            n = lines[-1]["n"] + 1 if lines else 0
+            lines.append({"n": n, "t": round(time.monotonic() - t0, 1), "text": text})
+            del lines[:-MAX_LOG]
+            state["message"] = text
 
         def emit(e):
-            if e.get("event") == "loading":
+            event = e.get("event")
+            if event == "loading":
                 state["status"] = "loading"
-            elif e.get("event") == "progress":
+                log(e.get("message") or "Loading the model")
+            elif event == "progress":
                 state["status"] = "running"
                 state["progress"] = {k: e[k] for k in ("step", "steps", "eta")}
+                log(f"Making the image: step {e['step']} of {e['steps']}")
+            elif event in ("log", "warning") and e.get("message"):
+                log(("Warning: " if event == "warning" else "") + e["message"])
 
+        log("Starting")
         try:
             self.out_dir.mkdir(parents=True, exist_ok=True)
             self.run(job, out, emit)
             state["image"] = out
+            log(f"Done in {round(time.monotonic() - t0)} s")
             state["status"] = "done"
         except Exception as e:
             state["error"] = f"{type(e).__name__}: {e}"
             if hf.is_access_error(e):
                 state["code"] = "model-access"  # the website shows how to get access
+            log(f"Error: {state['error']}")
             state["status"] = "error"
 
-    def public(self, job_id):
+    def public(self, job_id, since=0):
+        """The job for the website: only log lines numbered `since` and up (new ones)."""
         j = self.jobs.get(job_id)
-        return None if j is None else {k: v for k, v in j.items() if k != "image"}
+        if j is None:
+            return None
+        lines = [line for line in j["log"] if line["n"] >= since]
+        nxt = j["log"][-1]["n"] + 1 if j["log"] else 0
+        return {**{k: v for k, v in j.items() if k not in ("image", "log")}, "log": {"next": nxt, "lines": lines}}
 
 
 def make_server(port: int, out_dir: Path, run, info, access=hf.access, save_token=hf.save_token) -> ThreadingHTTPServer:
@@ -163,7 +190,11 @@ def make_server(port: int, out_dir: Path, run, info, access=hf.access, save_toke
             if parts == ["info"]:
                 return self.send(200, info())
             if len(parts) in (2, 3) and parts[0] == "jobs":
-                job = jobs.public(parts[1])
+                try:
+                    since = max(0, int(parse_qs(url.query).get("since", ["0"])[0]))
+                except ValueError:
+                    since = 0
+                job = jobs.public(parts[1], since)
                 if job is None:
                     return self.send(404, {"error": "no such job"})
                 if len(parts) == 2:

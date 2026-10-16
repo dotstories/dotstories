@@ -6,7 +6,9 @@ import type { SetupLine } from "@/lib/runner";
 const clock = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
 /** The DotStories app setting itself up, live, like build logs. Follows the newest line unless you scroll up. */
-export default function SetupLog({ lines, title, status }: { lines: SetupLine[]; title: string; status?: string }) {
+type Line = SetupLine & { id?: string }; // id: unique when logs are combined
+
+export default function SetupLog({ lines, title, status }: { lines: Line[]; title: string; status?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
 
@@ -37,7 +39,7 @@ export default function SetupLog({ lines, title, status }: { lines: SetupLine[];
           </div>
         )}
         {lines.map((l) => (
-          <div key={l.n} className="setup-log__line">
+          <div key={l.id ?? l.n} className="setup-log__line">
             <span className="setup-log__time">{clock(l.t)}</span>
             <span className="setup-log__text">{l.text}</span>
           </div>
