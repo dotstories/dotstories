@@ -7,6 +7,8 @@ initOpenNextCloudflareForDev();
 const nextConfig: NextConfig = {
   // Images are already sized; no image service needed on Cloudflare.
   images: { unoptimized: true },
+  // The web engine ships TypeScript source: Next.js compiles it (github.com/dotstories/web-engine).
+  transpilePackages: ["@dotstories/web-engine"],
   experimental: { turbopackUseBuiltinSass: false }, // our Sass rule below instead
   turbopack: {
     rules: {
