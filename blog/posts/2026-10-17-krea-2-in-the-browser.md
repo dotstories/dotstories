@@ -1,61 +1,55 @@
 ---
-title: A 12B image model, running in your browser
-description: Krea 2 Turbo (12B) now runs fully in Chrome or Edge with WebGPU, straight from your ComfyUI models folder. No install, no server, no re-download.
+title: A 12B image model now runs fully in your browser
+description: Krea 2 Turbo runs in Chrome or Edge with WebGPU, straight from your ComfyUI models folder. No install, no server, no re-download. Open source.
 date: 2026-10-17
 ---
 
-Until now, running a big image model meant installing something: ComfyUI, Python, a launcher. We wanted to know how far the browser can go.
+Running a big image model usually means installing something first: ComfyUI, Python, the right drivers, a launcher. That's an afternoon gone before you see a single image.
 
-Today, **Krea 2 Turbo**, a 12-billion-parameter image model, runs fully inside a browser tab. The text encoder, the image model and the decoder all run on your own GPU, with WebGPU. Nothing to install, and no server makes the image.
+Now you can skip all of it. **Krea 2 Turbo**, a 12-billion-parameter image model, runs fully in your browser.
 
-[Try it in your browser →](https://dotstories.github.io/web-engine/pages/generate/)
+## No install, no server, no re-download
 
-## How it works
+- **No install.** Open a page in Chrome or Edge. That's it.
+- **No server.** The image is made on your own GPU, with WebGPU. Your prompt and your images never leave your computer.
+- **No re-download.** Point the page at your ComfyUI `models` folder and it uses the files you already have.
 
-1. Open the page in Chrome or Edge.
+## Try it
+
+1. Open the [Krea 2 page](https://dotstories.github.io/web-engine/pages/generate/) in Chrome or Edge.
 2. Pick your ComfyUI `models` folder.
 3. Write a prompt and press **Generate**.
 
-The page reads the model files you already have, the same `fp8` files ComfyUI uses. Nothing is downloaded again, and nothing leaves your computer.
+You need these three files in that folder, the same ones ComfyUI uses:
 
-## How fast
+- `diffusion_models/krea2_turbo_fp8_scaled.safetensors`
+- `text_encoders/qwen3vl_4b_fp8_scaled.safetensors`
+- `vae/qwen_image_vae.safetensors`
 
-On an RTX 4080 in Edge, one image takes:
+Have the Dark Fantasy Kit's `loras/krea2_darkbrush.safetensors` too? Pick it in the LoRA menu and get the same brush style as the [Dark Fantasy Thumbnail](https://dotstories.com/dots/dark-fantasy-thumbnail) dot.
 
-- **about 41 seconds** at 512×512
-- **about 136 seconds** at 1024×1024
+## How fast is it?
 
-That includes loading 13 GB of weights onto the GPU. It is slower than native ComfyUI for now, and we are working on speed.
+On an RTX 4080, one image takes about **41 seconds** at 512×512 and about **136 seconds** at 1024×1024, including loading the model onto the GPU. That's slower than ComfyUI for now. We're working on it.
 
-## Why this was hard
+You'll need a desktop GPU with about 16 GB of memory. Not sure yours can do it? [Run the probe](https://dotstories.github.io/web-engine/pages/probe/) first: it checks your browser and GPU in a few seconds.
 
-Most ways to run models in the browser go through WebAssembly memory, which stops at 4 GB. Krea 2 needs about 18 GB of files. So we wrote a small WebGPU runtime of our own:
+## Same result as ComfyUI
 
-- **Weights go straight from the file to the GPU**, one layer at a time, never through WebAssembly memory.
-- **fp8 weights are unpacked inside the GPU shaders**, because WebGPU has no fp8 type.
-- **Every kernel is tested against a reference.** The text encoder, each transformer step and the decoder match ComfyUI's own code with a cosine similarity of 0.999999999 or better.
+Browser AI usually stops at 4 GB, and Krea 2 needs about 18. So we wrote our own small engine: it moves the model from your disk to your GPU one layer at a time, and unpacks the `fp8` weights right on the GPU.
 
-As far as we know, this is the first public 12B image model that runs end to end in a browser. If you know of an earlier one, tell us: we'd love to see it.
-
-## What you need
-
-- Chrome or Edge 113+ on a desktop
-- A GPU with `shader-f16` support and about 16 GB of memory
-- Krea 2's files in a ComfyUI `models` folder:
-  - `diffusion_models/krea2_turbo_fp8_scaled.safetensors`
-  - `text_encoders/qwen3vl_4b_fp8_scaled.safetensors`
-  - `vae/qwen_image_vae.safetensors`
-
-Not sure your computer can handle it? [Run the probe](https://dotstories.github.io/web-engine/pages/probe/) first.
-
-Krea 2 has its own license. Read and follow it before you use the model.
+Every step is checked against ComfyUI's own code, so you get the image ComfyUI would make, not a rough copy.
 
 ## What's next
 
-- Faster attention and half-precision activations
-- Testing on Macs with unified memory
-- **Run in the browser** for Krea 2 dots on [dotstories.com](https://dotstories.com)
+- Faster images
+- Testing on Macs
+- A **Run in the browser** button for Krea 2 dots on [dotstories.com](https://dotstories.com)
 
-## It's open source
+Krea 2 has its own license. Read it and follow it before you use the model.
 
-The engine is Apache-2.0-licensed: [github.com/dotstories/web-engine](https://github.com/dotstories/web-engine). Issues, ideas and pull requests are welcome, and so are your test results on other GPUs. Come say hi on [Discord](https://discord.gg/TJWKQkkuHN).
+## Open source
+
+The engine is Apache-2.0-licensed and open to everyone: [github.com/dotstories/web-engine](https://github.com/dotstories/web-engine). Tried it on your GPU? Share your time on [Discord](https://discord.gg/TJWKQkkuHN).
+
+[Make an image with Krea 2 in your browser →](https://dotstories.github.io/web-engine/pages/generate/)
