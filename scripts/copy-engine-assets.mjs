@@ -1,5 +1,5 @@
 // Copies the web engine's tokenizer files to public/engine/ so the engine worker can load them.
-// Runs before dev and build (the files come from the @dotstories/web-engine package, not from git).
+// Runs in dev and build (package.json) (the files come from the @dotstories/web-engine package, not from git).
 import { copyFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";

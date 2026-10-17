@@ -4,10 +4,8 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
-    "predev": "node scripts/copy-engine-assets.mjs",
-    "dev": "next dev",
-    "prebuild": "node scripts/copy-engine-assets.mjs",
-    "build": "next build",
+    "dev": "node scripts/copy-engine-assets.mjs && next dev",
+    "build": "node scripts/copy-engine-assets.mjs && next build",
     "build:worker": "node scripts/patch-opennext.mjs && opennextjs-cloudflare build",
     "preview:worker": "opennextjs-cloudflare preview",
     "start": "next start",

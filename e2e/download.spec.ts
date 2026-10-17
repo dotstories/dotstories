@@ -21,11 +21,3 @@ test("before the first release: coming soon, no broken links", async ({ page }) 
   await expect(page.getByText(/first release is coming soon/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /download for/i })).toHaveCount(0);
 });
-
-test("the demo links to the download page when the app is missing", async ({ page }) => {
-  await page.route("http://127.0.0.1:47761/**", (r) => r.abort());
-  await page.route("http://127.0.0.1:47760/**", (r) => r.abort());
-  await page.goto("/");
-  await page.getByRole("link", { name: /get the free dotstories app/i }).click();
-  await expect(page).toHaveURL(/\/download$/);
-});

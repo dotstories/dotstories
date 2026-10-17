@@ -2,18 +2,14 @@
 
 import { PlayFilledAlt } from "@carbon/icons-react";
 import { Button, InlineLoading, InlineNotification, NumberInput, ProgressBar, TextArea } from "@carbon/react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type ImageDot, type Inputs, latest, version as findVersion } from "@/lib/dot";
-import { downloadInstaller, installerFor } from "@/lib/download";
 import type { DotState } from "@/lib/dot-state";
 import { type Model, modelFor } from "@/lib/models";
 import { useModelTerms } from "@/lib/use-model-terms";
-import { isRunning, useRunStore } from "@/store/run";
-import InstallApp from "./install-app";
-import ModelAccess from "./model-access";
+import { isBusy } from "@/store/browser-run";
+import { useBrowserRun } from "@/store/run-in-browser";
 import ModelTerms from "./model-terms";
-import SetupLog from "./setup-log";
 
 type Props = {
   dot: ImageDot;
@@ -24,25 +20,21 @@ type Props = {
   acceptedTerms?: string[]; // logged in: model terms accepted before (D1)
 };
 
+const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`;
+
 export default function Demo({ dot, version, inputs, onChange, loggedIn = false, acceptedTerms }: Props) {
   const v = findVersion(dot, version) ?? latest(dot);
   const { prompt, seed } = inputs;
-  const { runner, job, image, shading, init, start } = useRunStore();
+  const { phase, image, init, run } = useBrowserRun();
   const model = modelFor(dot);
-  const running = isRunning(job, shading);
   const title = v.postSteps[0]?.text.title ?? dot.name;
 
   useEffect(() => {
     init();
   }, [init]);
 
-  // Run: runs now, or finds the app (the browser may ask to allow it), or installs it first.
-  const run = () =>
-    start(inputs, v.postSteps, () => {
-      installerFor(navigator.userAgent).then((os) => os && downloadInstaller(os));
-    });
   // The first run on a model asks to accept its terms.
-  const { onRun, dialog } = useTermsGate(model, run, loggedIn, acceptedTerms);
+  const { onRun, dialog } = useTermsGate(model, () => run(inputs, v.postSteps), loggedIn, acceptedTerms);
 
   return (
     <section aria-label="Try a dot" className="flex flex-col gap-6">
@@ -55,6 +47,7 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
           rows={4}
           maxCount={4000}
           enableCounter
+          helperText={v.inputs.finalPrompt && !inputs.finalPrompt ? "Your own prompt is used as you wrote it (the author's prompt refine is not applied)." : undefined}
         />
         <div className="flex items-end gap-4">
           <NumberInput
@@ -71,16 +64,12 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
               if (Number.isInteger(n) && n >= 0 && n <= 2 ** 32 - 1) onChange({ seed: n });
             }}
           />
-          <Button
-            renderIcon={PlayFilledAlt}
-            disabled={running || !prompt.trim() || runner.state === "checking" || runner.state === "blocked"}
-            onClick={onRun}
-          >
+          <Button renderIcon={PlayFilledAlt} disabled={isBusy(phase) || phase.name === "unsupported" || !prompt.trim()} onClick={onRun}>
             Run
           </Button>
           <Status />
         </div>
-        <Panels model={model} />
+        <Panel />
       </div>
       {dialog}
 
@@ -89,7 +78,7 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
       </p>
 
       <figure className="flex flex-col gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element -- result comes from the local runner */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- the result is made in this browser */}
         <img
           src={image ?? v.sample}
           alt={`${title}, ${image ? "your result" : "a dark fantasy thumbnail"}`}
@@ -98,7 +87,7 @@ export default function Demo({ dot, version, inputs, onChange, loggedIn = false,
           className="w-full rounded"
         />
         <figcaption className="text-sm text-[var(--cds-text-secondary)]">
-          {image ? "Your result, made on your computer." : `Made with one click using the ${dot.name} dot.`}{" "}
+          {image ? "Your result, made on your graphics card." : `Made with one click using the ${dot.name} dot.`}{" "}
           {dot.license.name}: {dot.license.commercial}.
         </figcaption>
       </figure>
@@ -127,75 +116,69 @@ function useTermsGate(model: Model | undefined, run: () => void, loggedIn: boole
   return { onRun, dialog };
 }
 
-/** Under the Run button: errors, model access steps, installing the app, and the app's live log. */
-function Panels({ model }: { model: Model | undefined }) {
-  const { runner, error, installing, access, showLog } = useRunStore();
-  return (
-    <>
-      {error && <InlineNotification kind="error" title="Run failed" subtitle={error} lowContrast hideCloseButton />}
-      {model && access && <ModelAccess model={model} access={access} />}
-      {installing ? <InstallApp /> : (runner.state === "setup" || showLog) && <RunLog />}
-    </>
-  );
-}
-
-/** One log for everything the app does after Run: its setup, then this run (download, loading, steps). */
-function RunLog() {
-  const { runner, logs, jobLogs, job } = useRunStore();
-  const lines = [...logs.map((l) => ({ ...l, id: `s${l.n}` })), ...jobLogs.map((l) => ({ ...l, id: `j${l.n}` }))];
-  const status = runner.state === "setup" ? runner.setup.message : (job?.message ?? (runner.state === "ready" ? "Ready" : "Waiting for the app"));
-  return <SetupLog lines={lines} title="DotStories app · log" status={status} />;
-}
-
+/** Next to Run: what happens now. */
 function Status() {
-  const { runner, job, shading, installing } = useRunStore();
-
-  if (shading) return <InlineLoading description="Adding title and effects in your browser…" />;
-  if (job?.status === "loading" || job?.status === "queued")
-    return <InlineLoading description="Getting the model ready (first run downloads it) · see the log below" />;
-  if (job?.status === "running" && job.progress) {
-    const { step, steps, eta } = job.progress;
-    return (
-      <ProgressBar
-        className="flex-1"
-        label="Generating"
-        value={step}
-        max={steps}
-        helperText={`Step ${step}/${steps} · ~${Math.ceil(eta)} s left`}
-      />
-    );
+  const { phase, gpu, folderName, cancel } = useBrowserRun();
+  const muted = "text-sm text-[var(--cds-text-secondary)]";
+  const stop = (
+    <Button kind="ghost" size="sm" onClick={cancel}>
+      Cancel
+    </Button>
+  );
+  switch (phase.name) {
+    case "checking":
+      return <InlineLoading description="Checking your browser…" />;
+    case "unsupported":
+      return <span className="text-sm text-[var(--cds-support-warning)]">{phase.reason}</span>;
+    case "downloading":
+      return (
+        <div className="flex flex-1 items-end gap-2">
+          <ProgressBar className="flex-1" label={`Downloading ${phase.file}`} value={phase.done} max={phase.total} helperText={`${gb(phase.done)} of ${gb(phase.total)}`} />
+          {stop}
+        </div>
+      );
+    case "making":
+      return (
+        <div className="flex flex-1 items-end gap-2">
+          <ProgressBar className="flex-1" label="Making the image on your graphics card" value={phase.progress.fraction} max={1} helperText={phase.progress.message} />
+          {stop}
+        </div>
+      );
+    case "shading":
+      return <InlineLoading description="Adding title and effects in your browser…" />;
+    case "done":
+      return <span className={muted}>Done in {phase.seconds} s.</span>;
+    default:
+      return (
+        <span className={muted}>
+          Runs on {gpu ?? "your graphics card"}, nothing is uploaded.{" "}
+          {folderName ? `Models folder: ${folderName}.` : "Run asks once for a models folder: your ComfyUI models folder, or any empty folder."}
+        </span>
+      );
   }
-  if (runner.state === "checking") return <InlineLoading description="Looking for the DotStories app…" />;
-  if (installing && runner.state === "missing") return <InlineLoading description="Waiting for the DotStories app to start…" />;
-  if (runner.state === "setup") return <InlineLoading description={runner.setup.message} />;
-  if (runner.state === "blocked")
-    return (
-      <span className="text-sm text-[var(--cds-support-warning)]">
-        Your browser blocks the connection to the DotStories app. Click the icon left of the address → Site settings →
-        allow “Apps on device” (or “Local network access”), then reload.
-      </span>
-    );
-  if (runner.state === "idle" || runner.state === "missing")
-    return (
-      <span className="text-sm text-[var(--cds-text-secondary)]">
-        {runner.state === "idle"
-          ? "Press Run: your browser asks to connect to the DotStories app on this computer, click Allow. No app? Run installs it, or "
-          : "No DotStories app found. Press Run to install it, or "}
-        <Link className="cds--link" href="/download">
-          get the free DotStories app
-        </Link>
-        .
-      </span>
-    );
+}
 
-  const { hardware, estimate } = runner.info;
+/** Under Run: missing models (with the Download button) and errors. */
+function Panel() {
+  const { phase, download } = useBrowserRun();
+  if (phase.name === "error") return <InlineNotification kind="error" title="Run failed" subtitle={phase.message} lowContrast hideCloseButton />;
+  if (phase.name !== "missing") return null;
   return (
-    <span className="text-sm text-[var(--cds-text-secondary)]">
-      Ready on {hardware.name} · {estimate.label}
-      {estimate.warning && <span className="block text-[var(--cds-support-warning)]">{estimate.warning}</span>}
-      <span className="block">
-        First run downloads {estimate.download_gb} GB (~{estimate.download_minutes} min).
-      </span>
-    </span>
+    <section aria-label="Missing models" className="flex flex-col items-start gap-3 rounded border border-[var(--cds-border-subtle)] p-4">
+      <p className="text-sm">
+        Your models folder is missing {phase.missing.length === 1 ? "1 file" : `${phase.missing.length} files`} ({gb(phase.bytes)}). They download once
+        from Hugging Face (Comfy-Org/Krea-2) into the folder, where ComfyUI can use them too.
+      </p>
+      <ul className="list-disc pl-5 text-sm text-[var(--cds-text-secondary)]">
+        {phase.missing.map((d) => (
+          <li key={d.name}>
+            {d.folder}/{d.name} · {gb(d.size)}
+          </li>
+        ))}
+      </ul>
+      <Button size="sm" onClick={download}>
+        Download {gb(phase.bytes)}
+      </Button>
+    </section>
   );
 }

@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { acceptedTerms, fakeRunner, loopback } from "./fakes";
+import { fakeEngine } from "./fake-engine";
+import { acceptedTerms } from "./fakes";
 
 // Real Pyodide (numpy + Pillow from the CDN) running the dot's shader.py in the browser.
 test("the shader post-step runs in the browser and matches the reference card", async ({ page }) => {
   test.setTimeout(240_000);
-  await loopback(page, "granted");
   await acceptedTerms(page);
-  await fakeRunner(page, "e2e/fixtures/raw-weeping-gate.png");
+  await fakeEngine(page, { image: "e2e/fixtures/raw-weeping-gate.png" });
   await page.goto("/");
   await page.getByRole("button", { name: "Run" }).click();
 
