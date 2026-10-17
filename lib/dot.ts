@@ -8,6 +8,9 @@ export const InputsSchema = z.object({
   width: z.number().int().min(64).max(2048),
   height: z.number().int().min(64).max(2048),
   steps: z.number().int().min(1).max(50),
+  // The exact text for the text encoder when the author's workflow rewrote prompt + style (e.g. ComfyUI's
+  // prompt refine). Used only while prompt and style are unchanged; otherwise "prompt. style" is used.
+  finalPrompt: z.string().min(1).max(8000).optional(),
 });
 
 /** What the runner needs to make music (Stable Audio 3). */
@@ -76,6 +79,9 @@ export type Inputs = z.infer<typeof InputsSchema>;
 export type MusicInputs = z.infer<typeof MusicInputsSchema>;
 export type ShaderStep = z.infer<typeof ShaderStepSchema>;
 type VersionOf<D extends Dot> = D["versions"][number];
+
+/** What the text encoder gets: the author's final prompt, or "prompt. style" (the Dark Fantasy Kit's rule). */
+export const encoderPrompt = (inputs: Inputs) => inputs.finalPrompt ?? `${inputs.prompt}. ${inputs.style}`;
 
 /** Engines the runner app can run today. */
 export const RUNNABLE_ENGINES: Dot["engine"][] = ["krea2-turbo"];

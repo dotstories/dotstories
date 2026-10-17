@@ -7,7 +7,7 @@ test("catalog lists dots and opens a dot page", async ({ page }) => {
   await page.getByRole("link", { name: /dark fantasy thumbnail/i }).click();
   await expect(page).toHaveURL(/\/dots\/dark-fantasy-thumbnail$/);
   await expect(page.getByRole("heading", { level: 1, name: "Dark Fantasy Thumbnail" })).toBeVisible();
-  await expect(page.getByLabel("Version")).toHaveValue("1.0.0");
+  await expect(page.getByLabel("Version")).toHaveValue("1.1.0");
   await expect(page.getByRole("button", { name: "Run" })).toBeVisible();
   await expect(page.getByRole("link", { name: /fork on github/i })).toHaveAttribute("href", /github\.com/);
   await expect(page.getByText(/krea 2 community license/i).first()).toBeVisible();

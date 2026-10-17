@@ -21,7 +21,7 @@ test("Copy setup copies everything needed to reproduce it", async ({ page, conte
   await page.getByRole("button", { name: "Share" }).click();
   await page.getByRole("menuitem", { name: "Copy setup" }).click();
   const setup = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
-  expect(setup).toMatchObject({ version: "1.0.0", engine: "krea2-turbo", inputs: { seed: 7, steps: 8 } });
+  expect(setup).toMatchObject({ version: "1.1.0", engine: "krea2-turbo", inputs: { seed: 7, steps: 8 } });
 });
 
 test("shared links get a preview card with the prompt", async ({ page }) => {
