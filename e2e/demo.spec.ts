@@ -83,3 +83,11 @@ test("first run: accept the model terms, then it runs; next time no question", a
   await expect(page.getByRole("dialog", { name: /terms of use/i })).toBeHidden();
   await expect.poll(() => runs.length).toBe(2);
 });
+
+test("the site serves the engine's tokenizer files", async ({ request }) => {
+  for (const name of ["vocab.json", "merges.txt"]) {
+    const res = await request.get(`/engine/tokenizers/qwen2/${name}`);
+    expect(res.status(), name).toBe(200);
+    expect((await res.body()).length, name).toBeGreaterThan(1_000_000);
+  }
+});
