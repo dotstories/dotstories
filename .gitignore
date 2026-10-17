@@ -70,3 +70,6 @@ __pycache__/
 PLAN.md
 /claude/
 *.private.md
+
+# web engine assets, copied from the package (scripts/copy-engine-assets.mjs)
+/public/engine/
