@@ -63,9 +63,13 @@ function idb<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBReq
     open.onupgradeneeded = () => open.result.createObjectStore(STORE);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
-      const request = run(open.result.transaction(STORE, mode).objectStore(STORE));
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      try {
+        const request = run(open.result.transaction(STORE, mode).objectStore(STORE));
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      } catch (e) {
+        reject(e); // e.g. DataCloneError: thrown here, not as an error event
+      }
     };
   });
 }
