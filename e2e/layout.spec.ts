@@ -5,7 +5,7 @@ test("header and footer on the homepage", async ({ page }) => {
   await expect(page.getByRole("banner").getByRole("link", { name: "DotStories", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /dotstories source code on github/i })).toBeVisible();
   await expect(page.getByRole("banner").getByRole("link", { name: /DotStories on GitHub/ })).toBeVisible();
-  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Source code on GitHub" })).toBeVisible();
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Source code on GitHub", exact: true })).toBeVisible();
 });
 
 test("Carbon dark theme is applied", async ({ page }) => {
