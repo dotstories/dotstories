@@ -75,12 +75,12 @@ export function createBrowserRun(deps: Deps) {
     /** Scan the folder: complete → make; else ask to download what is missing. */
     const continueWith = async (job: Job) => {
       const scan = await deps.scan(folder!);
-      if (scan.missing.length) {
+      if ("bytes" in scan) {
         pending = job;
         return set({ phase: { name: "missing", missing: scan.missing, bytes: scan.bytes } });
       }
       pending = null;
-      await make(scan.files as ModelFiles, job);
+      await make(scan.files, job);
     };
 
     return {
