@@ -23,7 +23,7 @@ export default function Footer() {
             <p className="max-w-sm text-center text-sm text-[var(--cds-text-secondary)] md:text-left">
               DotStories is open source and made by its community. Share a dot, report a bug or send a pull request.{" "}
               <a className="cds--link" href={REPO} target="_blank" rel="noreferrer">
-                Contribute on GitHub
+                Source code on GitHub
               </a>
             </p>
           </div>

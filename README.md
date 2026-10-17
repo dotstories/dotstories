@@ -102,6 +102,12 @@ Everyone in the community follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Found a security issue? Please don't open a public issue: see [SECURITY.md](SECURITY.md).
 
+## Our promises
+
+- **Always open source.** The code stays under an open source license approved by the [OSI](https://opensource.org/licenses).
+- **Nothing moves behind a paywall.** Features never move from the open version to a paid one.
+- **Creators keep the credit.** You keep the rights to your dots, and forks always show who made the original.
+
 ## License
 
 DotStories is licensed under the [GNU Affero General Public License v3.0](LICENSE). Contributions are covered by our
