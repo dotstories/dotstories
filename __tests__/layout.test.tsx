@@ -37,7 +37,7 @@ describe("Footer", () => {
     render(<Footer />);
     expect(screen.getByText(/open source and made by its community/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /source code on github/i })).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
-    expect(screen.getByRole("link", { name: "Contribute on GitHub" })).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
+    expect(screen.getByRole("link", { name: "Source code on GitHub" })).toHaveAttribute("href", "https://github.com/dotstories/dotstories");
   });
 
   it("the project's own socials: Discord, X, GitHub (no personal profiles)", () => {
