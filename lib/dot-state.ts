@@ -32,14 +32,17 @@ export function toQuery(dot: Dot, state: DotState): string {
   return q.toString();
 }
 
-/** The dot's inputs with the visitor's changes. */
+/** The dot's inputs with the visitor's changes. A changed prompt drops the author's final prompt (it was made from theirs). */
 export function inputsFor<D extends Dot>(dot: D, state: DotState): D["versions"][number]["inputs"] {
   const { inputs } = versionOf(dot, state) as D["versions"][number];
+  const changed = state.prompt !== undefined && state.prompt !== inputs.prompt;
+  const { finalPrompt, ...rest } = inputs as typeof inputs & { finalPrompt?: string };
   return {
-    ...inputs,
-    ...(state.prompt !== undefined ? { prompt: state.prompt } : {}),
+    ...rest,
+    ...(finalPrompt !== undefined && !changed ? { finalPrompt } : {}),
+    ...(changed ? { prompt: state.prompt } : {}),
     ...(state.seed !== undefined ? { seed: state.seed } : {}),
-  };
+  } as D["versions"][number]["inputs"];
 }
 
 const key = (dot: Dot) => `dotstories:dot:${dot.slug}`;

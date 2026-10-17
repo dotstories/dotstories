@@ -38,7 +38,18 @@ describe("toQuery (state → URL)", () => {
 
 describe("inputsFor", () => {
   it("fills in the dot defaults", () => {
-    expect(inputsFor(darkFantasy, { prompt: "A tower" })).toEqual({ ...defaults, prompt: "A tower" });
+    expect(inputsFor(darkFantasy, { seed: 7 })).toEqual({ ...defaults, seed: 7 });
+  });
+
+  it("keeps the author's final prompt while the prompt is unchanged (a new seed is fine)", () => {
+    expect(defaults.finalPrompt).toBeDefined();
+    expect(inputsFor(darkFantasy, { seed: 7, prompt: defaults.prompt }).finalPrompt).toBe(defaults.finalPrompt);
+  });
+
+  it("drops the final prompt once the prompt is edited: it was made from the author's text", () => {
+    const { finalPrompt, ...rest } = defaults;
+    expect(finalPrompt).toBeDefined();
+    expect(inputsFor(darkFantasy, { prompt: "A tower" })).toEqual({ ...rest, prompt: "A tower" });
   });
 });
 

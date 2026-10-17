@@ -1,4 +1,5 @@
-import { DotSchema, latest, version } from "../lib/dot";
+import { createHash } from "node:crypto";
+import { DotSchema, encoderPrompt, latest, version } from "../lib/dot";
 import { darkFantasy } from "../lib/dots/dark-fantasy";
 
 describe("dot format", () => {
@@ -27,10 +28,26 @@ describe("dot format", () => {
     expect(bad({ engine: "unknown" })).toBe(false);
   });
 
-  it("inputs match what the runner accepts", () => {
-    const inputs = latest(darkFantasy).inputs;
-    expect(inputs.steps).toBe(8);
-    expect(inputs.width % 16).toBe(0);
-    expect(inputs.height % 16).toBe(0);
+  it("the latest version uses the Dark Fantasy Kit's settings: 1928 × 1088 (16:9, 2 MP), 8 steps", () => {
+    const v = latest(darkFantasy);
+    expect(v.version).toBe("1.1.0");
+    expect(v.inputs).toMatchObject({ width: 1928, height: 1088, steps: 8, seed: 54460995 });
+  });
+
+  it("keeps the Kit's refined prompt byte for byte (from ComfyUI's history)", () => {
+    const text = latest(darkFantasy).inputs.finalPrompt!;
+    expect(createHash("sha256").update(text, "utf8").digest("hex")).toBe("6a411ed9bb3ab29dac8d903cfffd3798d476568eabee0c8bf851a8fe3c148d87");
+  });
+});
+
+describe("encoderPrompt", () => {
+  const inputs = latest(darkFantasy).inputs;
+
+  it("is the author's final prompt when there is one", () => {
+    expect(encoderPrompt(inputs)).toBe(inputs.finalPrompt);
+  });
+
+  it("is 'prompt. style' otherwise, like the Dark Fantasy Kit", () => {
+    expect(encoderPrompt({ ...inputs, finalPrompt: undefined, prompt: "A tower", style: "ink" })).toBe("A tower. ink");
   });
 });

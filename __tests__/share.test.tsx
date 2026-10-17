@@ -20,7 +20,7 @@ describe("setupJson", () => {
     const setup = JSON.parse(setupJson(darkFantasy, { seed: 7 }));
     expect(setup).toMatchObject({
       dot: `${SITE}/dots/dark-fantasy-thumbnail`,
-      version: "1.0.0",
+      version: "1.1.0",
       engine: "krea2-turbo",
       inputs: { ...latest(darkFantasy).inputs, seed: 7 },
     });

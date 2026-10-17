@@ -1,4 +1,36 @@
 import type { ImageDot } from "../dot";
+import { WEEPING_GATE_FINAL_PROMPT } from "./dark-fantasy-prompt";
+
+const first: ImageDot["versions"][number] = {
+  version: "1.0.0",
+  date: "2026-10-13",
+  changelog: "First version.",
+  inputs: {
+    prompt:
+      "A giant pale stone hand standing perfectly vertical in the center of a dark cave, wrist at the bottom, open palm facing the viewer, all fingers extended straight up toward the ceiling. A single thin beam of violet energy rises straight upward from the fingertips into the darkness. Heavy fog fills the cave floor around the wrist. Simple composition, symmetrical, centered, single focal point, empty dark space around it.",
+    style:
+      "Lineage 2 inspired Korean MMORPG fantasy art, high fantasy medieval world, ornate elven and human stone architecture with tall slender spires and graceful flowing arches, ancient mystical ruins, dark overcast dusk, thick rolling fog, cold blue-grey and deep violet palette with a few faint golden lights, Unreal Engine cinematic, atmospheric depth, soft volumetric light, painterly realism, subtle film grain",
+    seed: 54460995,
+    width: 1920,
+    height: 1088,
+    steps: 8,
+  },
+  postSteps: [
+    {
+      type: "shader",
+      script: "/dots/dark-fantasy/shader.py",
+      files: ["fonts/Cinzel.ttf", "fonts/CormorantItalic.ttf"],
+      preset: "Twilight Clear",
+      text: {
+        title: "The Weeping Gate",
+        region: "Hollow Kingdom · Old Royal Road",
+        subtitle: "Ashes of the First Kingdom",
+        quote: "Mist gathers over the old graves, patient as the dead beneath them.",
+      },
+    },
+  ],
+  sample: "/demo/weeping-gate.jpg",
+};
 
 export const darkFantasy: ImageDot = {
   slug: "dark-fantasy-thumbnail",
@@ -16,35 +48,13 @@ export const darkFantasy: ImageDot = {
   forkable: true,
   source: "https://github.com/dotstories/dotstories/tree/main/public/dots/dark-fantasy",
   versions: [
+    first,
     {
-      version: "1.0.0",
-      date: "2026-10-13",
-      changelog: "First version.",
-      inputs: {
-        prompt:
-          "A giant pale stone hand standing perfectly vertical in the center of a dark cave, wrist at the bottom, open palm facing the viewer, all fingers extended straight up toward the ceiling. A single thin beam of violet energy rises straight upward from the fingertips into the darkness. Heavy fog fills the cave floor around the wrist. Simple composition, symmetrical, centered, single focal point, empty dark space around it.",
-        style:
-          "Lineage 2 inspired Korean MMORPG fantasy art, high fantasy medieval world, ornate elven and human stone architecture with tall slender spires and graceful flowing arches, ancient mystical ruins, dark overcast dusk, thick rolling fog, cold blue-grey and deep violet palette with a few faint golden lights, Unreal Engine cinematic, atmospheric depth, soft volumetric light, painterly realism, subtle film grain",
-        seed: 54460995,
-        width: 1920,
-        height: 1088,
-        steps: 8,
-      },
-      postSteps: [
-        {
-          type: "shader",
-          script: "/dots/dark-fantasy/shader.py",
-          files: ["fonts/Cinzel.ttf", "fonts/CormorantItalic.ttf"],
-          preset: "Twilight Clear",
-          text: {
-            title: "The Weeping Gate",
-            region: "Hollow Kingdom · Old Royal Road",
-            subtitle: "Ashes of the First Kingdom",
-            quote: "Mist gathers over the old graves, patient as the dead beneath them.",
-          },
-        },
-      ],
-      sample: "/demo/weeping-gate.jpg",
+      ...first,
+      version: "1.1.0",
+      date: "2026-10-17",
+      changelog: "Same as the Dark Fantasy Kit: 1928 × 1088 and the Kit's refined prompt, so you get The Weeping Gate.",
+      inputs: { ...first.inputs, width: 1928, height: 1088, finalPrompt: WEEPING_GATE_FINAL_PROMPT },
     },
   ],
 };
