@@ -104,4 +104,5 @@ Found a security issue? Please don't open a public issue: see [SECURITY.md](SECU
 
 ## License
 
-DotStories is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+DotStories is licensed under the [GNU Affero General Public License v3.0](LICENSE). Contributions are covered by our
+[Contributor License Agreement](https://github.com/dotstories/cla/blob/main/dotstories_icla.md).

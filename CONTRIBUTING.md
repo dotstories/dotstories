@@ -38,9 +38,11 @@ pnpm build:worker && pnpm test:e2e
 - PR description: **Summary** (why), **Changes** (what), **Testing** (how you checked).
 - Link the issue it closes (`Closes #123`).
 
-## License
+## License and CLA
 
-By contributing, you agree that your contribution is licensed under the [AGPL-3.0](LICENSE).
+DotStories is licensed under the [AGPL-3.0](LICENSE). Before we merge your first pull request, you sign our
+[Contributor License Agreement](https://github.com/dotstories/cla/blob/main/dotstories_icla.md) once, with a comment on
+the pull request. A bot tells you how.
 
 ## Code of Conduct
 
