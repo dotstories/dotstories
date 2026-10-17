@@ -64,11 +64,13 @@ export async function fakeEngine(page: Page, { missing = [], image, noWebGpu = f
         const path = u.split("/resolve/main/")[1];
         w.__written = 0;
         const size = files[path];
+        let sent = 0;
         const body = new ReadableStream({
           pull(c) {
-            const left = size - (w.__written as number);
-            if (left <= 0) return c.close();
-            c.enqueue(new Uint8Array(Math.min(left, 64 * 1024 ** 2)));
+            const n = Math.min(size - sent, 64 * 1024 ** 2);
+            if (n <= 0) return c.close();
+            sent += n;
+            c.enqueue(new Uint8Array(n));
           },
         });
         return new Response(body, { status: 200 });
