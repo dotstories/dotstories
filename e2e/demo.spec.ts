@@ -1,77 +1,56 @@
 import { expect, test } from "@playwright/test";
-import { acceptedTerms, fakeRelease, fakeRunner, fakeSetup, loopback, RUNNER, SETUP, stubPython } from "./fakes";
+import { fakeEngine } from "./fake-engine";
+import { acceptedTerms, stubPython } from "./fakes";
 
-test("without the app: Run offers to install it", async ({ page }) => {
-  await loopback(page, "granted");
-  await page.route(`${RUNNER}/**`, (route) => route.abort());
-  await page.route(`${SETUP}/**`, (route) => route.abort());
-  await page.goto("/");
-  await expect(page.getByText(/press run to install it/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run" })).toBeEnabled();
-});
-
-test("one click without the app: download, live setup log, then the dot runs by itself", async ({ page }) => {
-  let log: { n: number; t: number; text: string }[] | null = null; // null = app not installed yet
-  let engineUp = false;
-  await loopback(page, "granted");
+test("Run in the browser: pick the models folder, make the image, add the title card", async ({ page }) => {
   await acceptedTerms(page);
-  await fakeRelease(page);
-  await fakeSetup(page, () => log);
-  const sent = await fakeRunner(page, undefined, () => engineUp);
+  const runs = await fakeEngine(page);
   await stubPython(page);
   await page.goto("/");
 
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Run" }).click();
-  expect((await download).url()).toMatch(/DotStories-(Windows\.exe|Mac\.dmg)$/);
-  await expect(page.getByRole("region", { name: /install the dotstories app/i })).toBeVisible();
-
-  log = [{ n: 0, t: 1, text: "Resolved 84 packages" }]; // the user opened the installer: the app sets up
-  await expect(page.getByRole("log", { name: /setup log/i })).toContainText("Resolved 84 packages");
-  log = [...log, { n: 1, t: 65, text: "Installed 84 packages" }];
-  await expect(page.getByRole("log", { name: /setup log/i })).toContainText("Installed 84 packages");
-
-  engineUp = true;
-  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible({ timeout: 15_000 });
-  expect(sent).toHaveLength(1);
-});
-
-test("the browser blocks the app: says how to allow it", async ({ page }) => {
-  await loopback(page, "denied");
-  await page.goto("/");
-  await expect(page.getByText(/your browser blocks the connection/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run" })).toBeDisabled();
-});
-
-test("before the browser asked: no lookup on page load", async ({ page }) => {
-  let asked = 0;
-  await loopback(page, "prompt");
-  await page.route(`${RUNNER}/**`, (route) => (asked++, route.abort()));
-  await page.goto("/");
-  await expect(page.getByText(/click allow/i)).toBeVisible();
-  expect(asked).toBe(0);
-});
-
-test("with the app: estimate, Run, progress, result", async ({ page }) => {
-  await loopback(page, "granted");
-  await acceptedTerms(page);
-  const sent = await fakeRunner(page);
-  await stubPython(page);
-  await page.goto("/");
-
-  await expect(page.getByText(/ready on rtx 4080 · ~5–15 seconds/i)).toBeVisible();
+  await expect(page.getByText(/runs on nvidia geforce rtx 4080, nothing is uploaded/i)).toBeVisible();
   await page.getByLabel(/prompt/i).fill("A lone tower in the fog");
   await page.getByRole("button", { name: "Run" }).click();
 
   const result = page.getByRole("img", { name: /your result/i });
   await expect(result).toBeVisible();
   await expect(result).toHaveAttribute("src", /^blob:/);
-  // The log opened on Run and stays, with what the app did.
-  const log = page.getByRole("log", { name: /setup log/i });
-  await expect(log).toContainText("Downloading the model: 12.0 of ~34 GB");
-  await expect(log).toContainText("Done in 9 s");
-  expect(await result.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
-  expect(sent).toEqual([expect.objectContaining({ prompt: "A lone tower in the fog", seed: 54460995, steps: 8 })]);
+  await expect(page.getByText(/done in \d+ s/i)).toBeVisible();
+  expect(runs).toEqual([expect.objectContaining({ width: 1928, height: 1088, seed: 54460995 })]);
+  expect(runs[0].prompt).toMatch(/^A lone tower in the fog\. Lineage 2 inspired/); // edited: no prompt refine
+});
+
+test("the dot as the author made it: the author's refined prompt goes to the engine", async ({ page }) => {
+  await acceptedTerms(page);
+  const runs = await fakeEngine(page);
+  await stubPython(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible();
+  expect(runs[0].prompt).toMatch(/^\*\*Scene Description:\*\*/);
+});
+
+test("missing models: lists them, downloads into the folder, then runs", async ({ page }) => {
+  await acceptedTerms(page);
+  const runs = await fakeEngine(page, { missing: ["vae/qwen_image_vae.safetensors"] });
+  await stubPython(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run" }).click();
+
+  const panel = page.getByRole("region", { name: "Missing models" });
+  await expect(panel).toContainText("vae/qwen_image_vae.safetensors · 0.3 GB");
+  expect(runs).toHaveLength(0);
+  await panel.getByRole("button", { name: "Download 0.3 GB" }).click();
+  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible({ timeout: 30_000 });
+  await expect(panel).toBeHidden();
+  expect(runs).toHaveLength(1);
+});
+
+test("a browser without WebGPU: says why, Run is disabled", async ({ page }) => {
+  await fakeEngine(page, { noWebGpu: true });
+  await page.goto("/");
+  await expect(page.getByText(/this browser has no webgpu/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run" })).toBeDisabled();
 });
 
 test("on a phone: browse only, no Run", async ({ browser }) => {
@@ -83,8 +62,7 @@ test("on a phone: browse only, no Run", async ({ browser }) => {
 });
 
 test("first run: accept the model terms, then it runs; next time no question", async ({ page }) => {
-  await loopback(page, "granted");
-  const sent = await fakeRunner(page);
+  const runs = await fakeEngine(page);
   await stubPython(page);
   await page.goto("/");
 
@@ -93,42 +71,15 @@ test("first run: accept the model terms, then it runs; next time no question", a
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("link", { name: "Krea 2 Community License" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Accept and run" })).toBeDisabled();
-  expect(sent).toHaveLength(0);
+  expect(runs).toHaveLength(0);
 
   await dialog.getByText(/i have read and agree/i).click();
   await dialog.getByRole("button", { name: "Accept and run" }).click();
   await expect(page.getByRole("img", { name: /your result/i })).toBeVisible();
-  expect(sent).toHaveLength(1);
+  expect(runs).toHaveLength(1);
 
   await page.reload();
   await page.getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("dialog", { name: /terms of use/i })).toBeHidden();
-  await expect.poll(() => sent.length).toBe(2);
-});
-
-test("gated model: paste a Hugging Face token, it goes to the app only, then the dot runs", async ({ page }) => {
-  const hf = { status: "no-token", tokens: [] as string[] };
-  const toSite: string[] = [];
-  page.on("request", (r) => {
-    if (r.postData()?.includes("hf_e2e")) toSite.push(r.url());
-  });
-  await loopback(page, "granted");
-  await acceptedTerms(page);
-  const sent = await fakeRunner(page, undefined, undefined, hf);
-  await stubPython(page);
-  await page.goto("/");
-
-  await page.getByRole("button", { name: "Run" }).click();
-  const card = page.getByRole("region", { name: /get access to krea 2 turbo/i });
-  await expect(card).toBeVisible();
-  await expect(card.getByRole("link", { name: /krea 2 turbo page/i })).toHaveAttribute("href", "https://huggingface.co/krea/Krea-2-Turbo");
-  expect(sent).toHaveLength(0);
-
-  await card.getByLabel("Hugging Face token").fill("hf_e2eToken1234567890abcdef");
-  await card.getByRole("button", { name: "Save to the app" }).click();
-  await expect(page.getByRole("img", { name: /your result/i })).toBeVisible();
-  await expect(card).toBeHidden();
-  expect(hf.tokens).toEqual(["hf_e2eToken1234567890abcdef"]);
-  expect(toSite).toEqual([`${RUNNER}/hf-token`]); // never to dotstories.com
-  expect(sent).toHaveLength(1);
+  await expect.poll(() => runs.length).toBe(2);
 });

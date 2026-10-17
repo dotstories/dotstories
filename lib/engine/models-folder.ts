@@ -24,7 +24,7 @@ export async function pickModelsFolder(store: HandleStore, picker?: Picker): Pro
   if (!pick) throw new Error("This browser can't open folders. Use Chrome or Edge on a desktop computer.");
   try {
     const folder = await pick({ id: "comfyui-models", mode: "read" });
-    await store.set(folder);
+    await store.set(folder).catch(() => {}); // not remembered (e.g. private window): ask again next visit
     return folder;
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") return null;
